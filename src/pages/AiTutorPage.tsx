@@ -29,7 +29,7 @@ export default function AiTutorPage() {
           {
             role: 'assistant',
             content:
-              'Hello! I\'m your AI Study Companion. I\'m here to help you learn and understand any topic. What would you like to study today?',
+              "Hey there! I'm your Quiz Wiz AI Tutor — think of me as your personal study buddy! I'm here to help you with any school subject, whether it's math, science, history, English, or anything else you're working on. What are you studying today?",
             timestamp: new Date().toISOString(),
             has_attachment: false,
             attachment_type: null,
@@ -120,7 +120,7 @@ export default function AiTutorPage() {
         {
           role: 'assistant',
           content:
-            'Hello! I\'m your AI Study Companion. What would you like to study today?',
+            "Hey! Ready for another study session? What subject can I help you with?",
           timestamp: new Date().toISOString(),
           has_attachment: false,
           attachment_type: null,

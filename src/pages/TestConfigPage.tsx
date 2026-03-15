@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, CheckCircle, BookOpen, Calculator, PenLine, Shuffle, Brain, Zap } from 'lucide-react'
+import { Loader2, CheckCircle, BookOpen, Calculator, PenLine, Shuffle, Brain, Zap, Printer, Mail, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/store/authStore'
 
 interface FileData {
   name: string
@@ -22,6 +23,15 @@ interface AnalysisResult {
   num_pages: number
 }
 
+interface GeneratedQuestion {
+  id: string
+  type: string
+  text: string
+  options?: string[]
+  correct_answer: string
+  difficulty: string
+}
+
 const quizTypes = [
   { value: 'multiple-choice', label: 'Multiple Choice', description: 'Best for specific answers', icon: CheckCircle },
   { value: 'word-problems', label: 'Word Problems', description: 'Best for showing understanding & comprehension', icon: BookOpen },
@@ -36,8 +46,62 @@ const difficulties = [
   { value: 'hard', label: 'Hard' },
 ]
 
+type OutputType = 'in-app' | 'print-pdf' | 'email-pdf'
+
+function buildPrintableHTML(testName: string, questions: GeneratedQuestion[], difficulty: string, testType: string): string {
+  const qTypeLabel = quizTypes.find(q => q.value === testType)?.label || testType
+  const questionsHTML = questions.map((q, i) => {
+    let answerArea = ''
+    if (q.type === 'multiple_choice' && q.options) {
+      answerArea = q.options.map((opt, j) =>
+        `<div style="margin:6px 0;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;">
+          <span style="font-weight:600;margin-right:8px;">${String.fromCharCode(65 + j)}.</span> ${opt}
+        </div>`
+      ).join('')
+    } else if (q.type === 'fill_blank') {
+      answerArea = '<div style="margin-top:8px;border-bottom:2px solid #333;width:60%;height:28px;"></div>'
+    } else {
+      answerArea = '<div style="margin-top:8px;min-height:60px;border:1px solid #ddd;border-radius:6px;padding:8px;"><span style="color:#aaa;font-size:12px;">Write your answer here</span></div>'
+    }
+    return `
+      <div style="margin-bottom:24px;page-break-inside:avoid;">
+        <p style="font-weight:600;font-size:15px;margin-bottom:8px;">${i + 1}. ${q.text}</p>
+        ${answerArea}
+      </div>`
+  }).join('')
+
+  return `<!DOCTYPE html>
+<html><head><title>${testName}</title>
+<style>
+  @media print { body { margin: 0.5in; } .no-print { display: none; } }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; }
+  .header { text-align: center; margin-bottom: 32px; border-bottom: 2px solid #0ea5e9; padding-bottom: 16px; }
+  .header h1 { font-size: 24px; margin: 0 0 4px 0; }
+  .header p { font-size: 13px; color: #666; margin: 2px 0; }
+  .meta { display: flex; gap: 24px; justify-content: center; margin-top: 8px; }
+  .meta span { font-size: 12px; color: #0284c7; font-weight: 600; }
+  .name-line { margin: 24px 0; font-size: 14px; }
+  .name-line span { border-bottom: 1px solid #333; display: inline-block; width: 250px; margin-left: 8px; }
+</style></head><body>
+  <div class="header">
+    <h1>${testName}</h1>
+    <div class="meta">
+      <span>${qTypeLabel}</span>
+      <span>${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} Difficulty</span>
+      <span>${questions.length} Questions</span>
+    </div>
+  </div>
+  <div class="name-line">Name: <span>&nbsp;</span> &nbsp;&nbsp; Date: <span>&nbsp;</span></div>
+  <div>${questionsHTML}</div>
+  <div class="no-print" style="text-align:center;margin-top:32px;">
+    <button onclick="window.print()" style="padding:12px 32px;background:#0ea5e9;color:white;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;">Print This Test</button>
+  </div>
+</body></html>`
+}
+
 export default function TestConfigPage() {
   const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
   const [fileData, setFileData] = useState<FileData | null>(null)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -49,6 +113,15 @@ export default function TestConfigPage() {
   const [difficulty, setDifficulty] = useState('medium')
   const [numQuestions, setNumQuestions] = useState(5)
   const [additionalPrompts, setAdditionalPrompts] = useState('')
+  const [outputType, setOutputType] = useState<OutputType>('in-app')
+  const [emailAddress, setEmailAddress] = useState('')
+  const [showEmailModal, setShowEmailModal] = useState(false)
+
+  useEffect(() => {
+    if (user?.email) {
+      setEmailAddress(user.email)
+    }
+  }, [user])
 
   useEffect(() => {
     const uploadedFile = sessionStorage.getItem('uploadedFile')
@@ -81,11 +154,11 @@ export default function TestConfigPage() {
 
       let response
       if (fileData.uploadType === 'pdf') {
-        // For PDFs: data is an ArrayBuffer stored as base64 via JSON serialization
-        // Convert ArrayBuffer to base64 string
         let base64Data: string
         if (typeof fileData.data === 'string') {
-          base64Data = fileData.data
+          // Data URL from readAsDataURL
+          const dataStr = fileData.data as string
+          base64Data = dataStr.includes(',') ? dataStr.split(',')[1] : dataStr
         } else {
           const bytes = new Uint8Array(fileData.data as ArrayBuffer)
           let binary = ''
@@ -98,9 +171,7 @@ export default function TestConfigPage() {
           filename: fileData.name,
         })
       } else {
-        // For images: data is a data URL like "data:image/png;base64,..."
         const dataUrl = fileData.data as string
-        // Extract just the base64 portion if it's a data URL
         const base64Data = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
 
         response = await api.post('/scan/analyze', {
@@ -124,6 +195,14 @@ export default function TestConfigPage() {
       return
     }
 
+    // If email output selected, validate email
+    if (outputType === 'email-pdf') {
+      if (!emailAddress || !emailAddress.includes('@')) {
+        setShowEmailModal(true)
+        return
+      }
+    }
+
     try {
       setIsGenerating(true)
       const payload = {
@@ -137,9 +216,51 @@ export default function TestConfigPage() {
       }
 
       const response = await api.post('/tests/generate', payload)
+      const testId = response.data.id || response.data.test_id
+      const generatedName = testName || `${analysis.subject} Quiz`
+
       sessionStorage.removeItem('uploadedFile')
-      navigate(`/test/${response.data.test_id}`)
-      toast.success('Test generated successfully!')
+
+      if (outputType === 'in-app') {
+        navigate(`/test/${testId}`)
+        toast.success('Test generated successfully!')
+      } else {
+        // For print and email, fetch the full test to get questions
+        const testResponse = await api.get(`/tests/${testId}`)
+        const questions: GeneratedQuestion[] = testResponse.data.questions
+
+        const printHTML = buildPrintableHTML(generatedName, questions, difficulty, testType)
+        const printWindow = window.open('', '_blank')
+        if (printWindow) {
+          printWindow.document.write(printHTML)
+          printWindow.document.close()
+
+          if (outputType === 'print-pdf') {
+            // Small delay to let styles render, then trigger print
+            setTimeout(() => printWindow.print(), 500)
+            toast.success('Test generated! Print dialog opening...')
+          } else {
+            // Email: trigger print (save as PDF) then open mailto
+            setTimeout(() => {
+              printWindow.print()
+              // After print dialog, open mailto
+              const subject = encodeURIComponent(`Quiz Wiz AI: ${generatedName}`)
+              const body = encodeURIComponent(
+                `Hi,\n\nPlease find the attached test "${generatedName}" generated by Quiz Wiz AI.\n\n` +
+                `Test Details:\n- Type: ${quizTypes.find(q => q.value === testType)?.label || testType}\n` +
+                `- Difficulty: ${difficulty}\n- Questions: ${numQuestions}\n\n` +
+                `To attach the PDF: Save the test from the print dialog as a PDF, then attach it to this email.\n\n` +
+                `Best regards`
+              )
+              window.open(`mailto:${emailAddress}?subject=${subject}&body=${body}`, '_self')
+              toast.success('Test generated! Save as PDF and attach to the email.')
+            }, 500)
+          }
+        }
+
+        // Also save the test for in-app viewing later
+        navigate(`/tests`)
+      }
     } catch (error) {
       toast.error('Failed to generate test')
     } finally {
@@ -150,6 +271,27 @@ export default function TestConfigPage() {
   if (!fileData) {
     return null
   }
+
+  const outputOptions = [
+    {
+      type: 'in-app' as OutputType,
+      icon: Brain,
+      label: 'In-App Test',
+      description: 'Take test in the app',
+    },
+    {
+      type: 'print-pdf' as OutputType,
+      icon: Printer,
+      label: 'Print Test PDF',
+      description: 'Generate & print PDF',
+    },
+    {
+      type: 'email-pdf' as OutputType,
+      icon: Mail,
+      label: 'Email Test PDF',
+      description: 'Generate & email PDF',
+    },
+  ]
 
   return (
     <div className="space-y-6 pb-6">
@@ -294,22 +436,47 @@ export default function TestConfigPage() {
         <div>
           <label className="block text-sm font-bold text-gray-900 mb-3">Test Output</label>
           <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 rounded-xl bg-sky-50 border-2 border-sky-500 text-center">
-              <Brain className="w-6 h-6 text-sky-600 mx-auto mb-1" />
-              <p className="text-xs font-semibold text-sky-700">In-App Test</p>
-              <p className="text-[10px] text-gray-500">Take test in the app</p>
-            </div>
-            <div className="p-3 rounded-xl bg-gray-50 border-2 border-gray-200 text-center opacity-50">
-              <PenLine className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-              <p className="text-xs font-semibold text-gray-500">Print Test PDF</p>
-              <p className="text-[10px] text-gray-400">Generate & print PDF</p>
-            </div>
-            <div className="p-3 rounded-xl bg-gray-50 border-2 border-gray-200 text-center opacity-50">
-              <PenLine className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-              <p className="text-xs font-semibold text-gray-500">Email Test PDF</p>
-              <p className="text-[10px] text-gray-400">Generate & email PDF</p>
-            </div>
+            {outputOptions.map((opt) => {
+              const Icon = opt.icon
+              const isSelected = outputType === opt.type
+              return (
+                <button
+                  key={opt.type}
+                  onClick={() => {
+                    setOutputType(opt.type)
+                    if (opt.type === 'email-pdf') {
+                      setShowEmailModal(true)
+                    }
+                  }}
+                  className={`p-3 rounded-xl text-center transition-all ${
+                    isSelected
+                      ? 'bg-sky-50 border-2 border-sky-500'
+                      : 'bg-gray-50 border-2 border-gray-200 hover:border-sky-300'
+                  }`}
+                >
+                  <Icon className={`w-6 h-6 mx-auto mb-1 ${isSelected ? 'text-sky-600' : 'text-gray-400'}`} />
+                  <p className={`text-xs font-semibold ${isSelected ? 'text-sky-700' : 'text-gray-600'}`}>{opt.label}</p>
+                  <p className={`text-[10px] ${isSelected ? 'text-sky-500' : 'text-gray-400'}`}>{opt.description}</p>
+                </button>
+              )
+            })}
           </div>
+
+          {/* Email address display when email-pdf selected */}
+          {outputType === 'email-pdf' && emailAddress && (
+            <div className="mt-3 px-4 py-2.5 bg-sky-50 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-sky-600" />
+                <span className="text-sm text-gray-700">{emailAddress}</span>
+              </div>
+              <button
+                onClick={() => setShowEmailModal(true)}
+                className="text-xs text-sky-600 font-semibold hover:underline"
+              >
+                Change
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -329,11 +496,42 @@ export default function TestConfigPage() {
         ) : (
           <>
             <Zap className="w-5 h-5" />
-            Create Test
+            {outputType === 'in-app' ? 'Create Test' : outputType === 'print-pdf' ? 'Create & Print Test' : 'Create & Email Test'}
           </>
         )}
       </motion.button>
+
+      {/* Email Address Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Email Address</h3>
+              <button onClick={() => setShowEmailModal(false)} className="p-1 rounded-lg hover:bg-gray-100">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              The test PDF will be prepared for this email address.
+            </p>
+            <input
+              type="email"
+              value={emailAddress}
+              onChange={(e) => setEmailAddress(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all mb-4"
+              placeholder="student@email.com"
+              autoFocus
+            />
+            <button
+              onClick={() => setShowEmailModal(false)}
+              disabled={!emailAddress || !emailAddress.includes('@')}
+              className="w-full py-3 rounded-xl font-semibold text-white bg-sky-500 hover:bg-sky-600 transition-colors disabled:opacity-50"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
