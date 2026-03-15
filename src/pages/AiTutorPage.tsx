@@ -24,7 +24,7 @@ export default function AiTutorPage() {
     const initSession = async () => {
       try {
         const response = await api.post('/homework/sessions/new')
-        setSessionId(response.data.session_id)
+        setSessionId(response.data.id || response.data.session_id)
         setMessages([
           {
             role: 'assistant',
@@ -115,7 +115,7 @@ export default function AiTutorPage() {
   const handleNewChat = async () => {
     try {
       const response = await api.post('/homework/sessions/new')
-      setSessionId(response.data.session_id)
+      setSessionId(response.data.id || response.data.session_id)
       setMessages([
         {
           role: 'assistant',
