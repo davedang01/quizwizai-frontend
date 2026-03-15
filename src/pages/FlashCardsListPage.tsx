@@ -12,6 +12,8 @@ export default function FlashCardsListPage() {
   const [decks, setDecks] = useState<FlashCardDeck[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [swipedDeckId, setSwipedDeckId] = useState<string | null>(null)
+  const [touchStartX, setTouchStartX] = useState(0)
 
   useEffect(() => {
     const fetchDecks = async () => {
@@ -37,6 +39,27 @@ export default function FlashCardsListPage() {
     } catch (error) {
       toast.error('Failed to delete deck')
     }
+  }
+
+  const handleTouchStart = (e: React.TouchEvent, deckId: string) => {
+    setTouchStartX(e.touches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent, deckId: string) => {
+    const touchEndX = e.touches[0].clientX
+    const diff = touchStartX - touchEndX
+
+    // Swiped left more than 80px
+    if (diff > 80) {
+      setSwipedDeckId(deckId)
+    } else if (diff < -80) {
+      // Swiped right more than 80px - hide delete button
+      setSwipedDeckId(null)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    // Keep the swiped state if it was swiped left
   }
 
   const containerVariants = {
@@ -108,14 +131,37 @@ export default function FlashCardsListPage() {
               key={deck.id}
               variants={itemVariants}
               whileHover={{ y: -5 }}
-              className="card p-6 cursor-pointer group relative"
+              className="card cursor-pointer group relative overflow-hidden"
               onClick={() => navigate(`/flashcards/${deck.id}`)}
+              onTouchStart={(e) => handleTouchStart(e, deck.id)}
+              onTouchMove={(e) => handleTouchMove(e, deck.id)}
+              onTouchEnd={handleTouchEnd}
             >
-              {/* Delete Button on Hover */}
+              {/* Delete Button - Revealed on swipe */}
+              <motion.div
+                initial={{ x: 0 }}
+                animate={{ x: swipedDeckId === deck.id ? -80 : 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="absolute inset-0 flex items-center justify-end bg-red-600 rounded-lg px-6 z-0"
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDeleteConfirm(deck.id)
+                    setSwipedDeckId(null)
+                  }}
+                  className="text-white font-semibold flex items-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Delete
+                </button>
+              </motion.div>
+
+              {/* Delete Button on Hover - Desktop */}
               <motion.button
                 initial={{ opacity: 0, scale: 0.8 }}
                 whileHover={{ opacity: 1, scale: 1 }}
-                className="absolute top-4 right-4 p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                className="absolute top-4 right-4 p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors hidden md:block z-10"
                 onClick={(e) => {
                   e.stopPropagation()
                   setDeleteConfirm(deck.id)
@@ -125,7 +171,7 @@ export default function FlashCardsListPage() {
               </motion.button>
 
               {/* Card Content */}
-              <div className="flex items-start gap-4">
+              <div className="p-6 relative z-10 bg-white flex items-start gap-4">
                 <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0 group-hover:shadow-lg transition-all">
                   <Layers className="w-6 h-6 text-white" />
                 </div>

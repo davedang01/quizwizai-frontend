@@ -19,6 +19,7 @@ import FlashCardViewerPage from '@/pages/FlashCardViewerPage'
 import AiTutorPage from '@/pages/AiTutorPage'
 import StudyGuidesListPage from '@/pages/StudyGuidesListPage'
 import StudyGuideDetailPage from '@/pages/StudyGuideDetailPage'
+import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 
 function App() {
@@ -57,6 +58,7 @@ function App() {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Protected Routes */}
       <Route

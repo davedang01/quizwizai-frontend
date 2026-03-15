@@ -103,6 +103,7 @@ export default function TestConfigPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const [fileData, setFileData] = useState<FileData | null>(null)
+  const [allFiles, setAllFiles] = useState<FileData[]>([])
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -124,19 +125,42 @@ export default function TestConfigPage() {
   }, [user])
 
   useEffect(() => {
-    const uploadedFile = sessionStorage.getItem('uploadedFile')
-    if (!uploadedFile) {
+    // Try multi-file first, fall back to single file for backward compat
+    let uploadedFileStr = sessionStorage.getItem('uploadedFiles')
+    let filesArrayToUse: FileData[] = []
+    let fileDataToUse: FileData | null = null
+
+    if (uploadedFileStr) {
+      try {
+        filesArrayToUse = JSON.parse(uploadedFileStr) as FileData[]
+        if (filesArrayToUse.length > 0) {
+          fileDataToUse = filesArrayToUse[0] // Use first file for analysis
+        }
+      } catch (error) {
+        console.error('Failed to parse uploadedFiles:', error)
+      }
+    }
+
+    // Fall back to single file (backward compat)
+    if (!fileDataToUse) {
+      uploadedFileStr = sessionStorage.getItem('uploadedFile')
+      if (uploadedFileStr) {
+        try {
+          fileDataToUse = JSON.parse(uploadedFileStr) as FileData
+          filesArrayToUse = [fileDataToUse]
+        } catch (error) {
+          console.error('Failed to parse uploadedFile:', error)
+        }
+      }
+    }
+
+    if (!fileDataToUse) {
       navigate('/create-test')
       return
     }
 
-    try {
-      const parsed = JSON.parse(uploadedFile) as FileData
-      setFileData(parsed)
-    } catch (error) {
-      toast.error('Failed to load uploaded file')
-      navigate('/create-test')
-    }
+    setFileData(fileDataToUse)
+    setAllFiles(filesArrayToUse)
   }, [navigate])
 
   // Auto-analyze on file load
@@ -154,9 +178,9 @@ export default function TestConfigPage() {
 
       let response
       if (fileData.uploadType === 'pdf') {
+        // For PDFs, analyze the first one (backend handles one at a time)
         let base64Data: string
         if (typeof fileData.data === 'string') {
-          // Data URL from readAsDataURL
           const dataStr = fileData.data as string
           base64Data = dataStr.includes(',') ? dataStr.split(',')[1] : dataStr
         } else {
@@ -171,11 +195,16 @@ export default function TestConfigPage() {
           filename: fileData.name,
         })
       } else {
-        const dataUrl = fileData.data as string
-        const base64Data = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
+        // For images, send ALL images in the array
+        const images_base64 = allFiles
+          .filter(f => f.uploadType !== 'pdf')
+          .map((file) => {
+            const dataUrl = file.data as string
+            return dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
+          })
 
         response = await api.post('/scan/analyze', {
-          images_base64: [base64Data],
+          images_base64,
         })
       }
 
@@ -220,6 +249,7 @@ export default function TestConfigPage() {
       const generatedName = testName || `${analysis.subject} Quiz`
 
       sessionStorage.removeItem('uploadedFile')
+      sessionStorage.removeItem('uploadedFiles')
 
       if (outputType === 'in-app') {
         navigate(`/test/${testId}`)
@@ -261,8 +291,10 @@ export default function TestConfigPage() {
         // Also save the test for in-app viewing later
         navigate(`/tests`)
       }
-    } catch (error) {
-      toast.error('Failed to generate test')
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail || 'Unknown error'
+      console.error('Generate test error:', error?.response?.data || error)
+      toast.error(`Failed to generate test: ${detail}`)
     } finally {
       setIsGenerating(false)
     }
@@ -300,7 +332,7 @@ export default function TestConfigPage() {
         <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Configure Your Test</h1>
         {analysis && (
           <p className="text-sm text-gray-500">
-            {analysis.num_pages || 1} page{(analysis.num_pages || 1) > 1 ? 's' : ''} ready • Customize your quiz settings
+            {allFiles.length} file{allFiles.length > 1 ? 's' : ''} • {analysis.num_pages || 1} page{(analysis.num_pages || 1) > 1 ? 's' : ''} ready • Customize your quiz settings
           </p>
         )}
       </div>

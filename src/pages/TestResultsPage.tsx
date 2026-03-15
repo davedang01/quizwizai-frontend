@@ -8,6 +8,9 @@ import {
   Trophy,
   CheckCircle2,
   XCircle,
+  Copy,
+  ArrowRight,
+  RefreshCw,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
@@ -21,6 +24,7 @@ export default function TestResultsPage() {
   const navigate = useNavigate()
   const [result, setResult] = useState<TestResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isResettingTest, setIsResettingTest] = useState(false)
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -49,6 +53,20 @@ export default function TestResultsPage() {
 
   if (!result) {
     return null
+  }
+
+  const handleRetakeTest = async () => {
+    if (!result) return
+    try {
+      setIsResettingTest(true)
+      await api.post(`/tests/${result.test_id}/reset`)
+      navigate(`/test/${result.test_id}`)
+      toast.success('Test reset successfully!')
+    } catch (error) {
+      toast.error('Failed to reset test')
+    } finally {
+      setIsResettingTest(false)
+    }
   }
 
   const getPerformanceMessage = (percentage: number) => {
@@ -287,47 +305,50 @@ export default function TestResultsPage() {
 
       {/* Action Buttons */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        className="space-y-3"
         variants={itemVariants}
       >
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/tests')}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-sky-500 text-sky-600 font-semibold hover:bg-sky-50 transition-colors"
-        >
-          <RotateCcw className="w-5 h-5" />
-          Retake Test
-        </motion.button>
-
+        {/* Create Another Version Button */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/create-test')}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
+          className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-gradient-coral text-white font-semibold hover:shadow-lg transition-all"
         >
-          <Plus className="w-5 h-5" />
-          New Test
+          <Copy className="w-5 h-5" />
+          Create Another Version
         </motion.button>
 
+        {/* Re-take Test Button */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/')}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-teal-cyan text-white font-semibold hover:shadow-lg transition-all"
+          onClick={handleRetakeTest}
+          disabled={isResettingTest}
+          className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg border-2 border-sky-500 text-sky-600 font-semibold hover:bg-sky-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <Home className="w-5 h-5" />
-          Home
+          {isResettingTest ? (
+            <>
+              <span className="w-5 h-5 border-2 border-sky-600 border-t-transparent rounded-full animate-spin" />
+              Resetting...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-5 h-5" />
+              Re-take Test
+            </>
+          )}
         </motion.button>
 
+        {/* Done Button */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/progress')}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-teal-600 text-teal-600 font-semibold hover:bg-teal-50 transition-colors"
+          onClick={() => navigate('/tests')}
+          className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
         >
-          <BookOpen className="w-5 h-5" />
-          Study Guide
+          <ArrowRight className="w-5 h-5" />
+          Done
         </motion.button>
       </motion.div>
     </motion.div>

@@ -19,6 +19,8 @@ export default function MyTestsPage() {
   const [tests, setTests] = useState<Test[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [swipedTestId, setSwipedTestId] = useState<string | null>(null)
+  const [touchStartX, setTouchStartX] = useState(0)
 
   useEffect(() => {
     const fetchTests = async () => {
@@ -65,6 +67,27 @@ export default function MyTestsPage() {
       default:
         return 'bg-gray-100 text-gray-700'
     }
+  }
+
+  const handleTouchStart = (e: React.TouchEvent, testId: string) => {
+    setTouchStartX(e.touches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent, testId: string) => {
+    const touchEndX = e.touches[0].clientX
+    const diff = touchStartX - touchEndX
+
+    // Swiped left more than 80px
+    if (diff > 80) {
+      setSwipedTestId(testId)
+    } else if (diff < -80) {
+      // Swiped right more than 80px - hide delete button
+      setSwipedTestId(null)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    // Keep the swiped state if it was swiped left
   }
 
   const containerVariants = {
@@ -157,10 +180,33 @@ export default function MyTestsPage() {
               key={test.id}
               variants={itemVariants}
               whileHover={{ y: -5 }}
-              className="card cursor-pointer overflow-hidden transition-all"
+              className="card cursor-pointer overflow-hidden transition-all relative"
               onClick={() => handleTestClick(test)}
+              onTouchStart={(e) => handleTouchStart(e, test.id)}
+              onTouchMove={(e) => handleTouchMove(e, test.id)}
+              onTouchEnd={handleTouchEnd}
             >
-              <div className="p-6">
+              {/* Delete Button - Revealed on swipe */}
+              <motion.div
+                initial={{ x: 0 }}
+                animate={{ x: swipedTestId === test.id ? -80 : 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="absolute inset-0 flex items-center justify-end bg-red-600 rounded-lg px-6 z-0"
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDeleteConfirm(test.id)
+                    setSwipedTestId(null)
+                  }}
+                  className="text-white font-semibold flex items-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Delete
+                </button>
+              </motion.div>
+
+              <div className="p-6 relative z-10 bg-white">
                 {/* Test Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
@@ -220,19 +266,19 @@ export default function MyTestsPage() {
               {/* Divider */}
               <div className="border-t border-gray-200 h-0" />
 
-              {/* Footer Actions */}
-              <div className="px-6 py-4 bg-gray-50 flex items-center justify-between">
+              {/* Footer Actions - Desktop delete button */}
+              <div className="px-6 py-4 bg-gray-50 flex items-center justify-between relative z-10">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     setDeleteConfirm(test.id)
                   }}
-                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors hidden md:block"
                   title="Delete test"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
-                <span className="text-xs text-gray-600">
+                <span className="text-xs text-gray-600 flex-1 text-center md:text-right">
                   {test.is_completed
                     ? 'View results'
                     : 'Continue test'}

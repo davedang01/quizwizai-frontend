@@ -9,6 +9,9 @@ import {
   User,
   LogOut,
   X,
+  Menu,
+  BookOpen,
+  TrendingUp,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -25,9 +28,21 @@ const bottomNavItems = [
   { path: '/tutor', icon: MessageCircle, label: 'Tutor' },
 ]
 
+const drawerNavItems = [
+  { path: '/', icon: Home, label: 'Home' },
+  { path: '/create-test', icon: PenTool, label: 'Create Test' },
+  { path: '/tests', icon: ClipboardList, label: 'My Tests' },
+  { path: '/create-flashcards', icon: Layers, label: 'Create Flash Cards' },
+  { path: '/flashcards', icon: BookOpen, label: 'My Flash Cards' },
+  { path: '/tutor', icon: MessageCircle, label: 'AI Tutor' },
+  { path: '/study-guide', icon: BookOpen, label: 'Study Guides' },
+  { path: '/progress', icon: TrendingUp, label: 'Progress' },
+]
+
 export default function MainLayout({ children }: MainLayoutProps) {
   const { user, logout } = useAuthStore()
   const [showAccountMenu, setShowAccountMenu] = useState(false)
+  const [showDrawer, setShowDrawer] = useState(false)
   const location = useLocation()
 
   const handleLogout = async () => {
@@ -45,7 +60,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Top Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0 z-30">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowDrawer(!showDrawer)}
+            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-6 h-6 text-gray-700" />
+          </button>
           <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
             <span className="text-white font-bold text-sm">Q</span>
           </div>
@@ -98,15 +120,87 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </div>
       </header>
 
+      {/* Side Drawer Navigation */}
+      <AnimatePresence>
+        {showDrawer && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDrawer(false)}
+              className="fixed inset-0 bg-black/30 z-40"
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: -320 }}
+              animate={{ x: 0 }}
+              exit={{ x: -320 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+              className="fixed left-0 top-0 h-screen w-80 bg-white shadow-xl z-50 flex flex-col overflow-y-auto"
+            >
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h2 className="text-lg font-bold text-gray-900">Navigation</h2>
+                <button
+                  onClick={() => setShowDrawer(false)}
+                  className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Drawer Links */}
+              <nav className="flex-1 px-2 py-4">
+                {drawerNavItems.map((item) => {
+                  const Icon = item.icon
+                  const active = isNavActive(item.path)
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setShowDrawer(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-1"
+                    >
+                      <div
+                        className={`flex items-center justify-center ${
+                          active ? 'text-sky-600' : 'text-gray-400'
+                        }`}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <span
+                        className={`font-medium ${
+                          active
+                            ? 'text-sky-600'
+                            : 'text-gray-700 hover:text-gray-900'
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                      {active && (
+                        <div className="ml-auto w-1 h-6 bg-sky-500 rounded-r" />
+                      )}
+                    </NavLink>
+                  )
+                })}
+              </nav>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Scrollable Content Area */}
-      <main className="flex-1 overflow-auto pb-safe">
+      <main className="flex-1 overflow-auto pb-20">
         <div className="p-4 max-w-2xl mx-auto w-full">
           {children}
         </div>
       </main>
 
-      {/* Bottom Navigation Bar */}
-      <nav className="bg-white border-t border-gray-200 flex-shrink-0 z-30">
+      {/* Bottom Navigation Bar - Fixed to bottom */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30">
         <div className="flex items-center justify-around px-2 py-1 max-w-lg mx-auto">
           {bottomNavItems.map((item) => {
             const Icon = item.icon

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Copy, ArrowRight, RefreshCw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import api from '@/utils/api'
 import { Test, Question } from '@/types'
@@ -20,6 +20,7 @@ export default function TestPage() {
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({})
   const [showReview, setShowReview] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isResettingTest, setIsResettingTest] = useState(false)
 
   useEffect(() => {
     const fetchTest = async () => {
@@ -48,6 +49,93 @@ export default function TestPage() {
 
   if (!test) {
     return null
+  }
+
+  const handleRetakeTest = async () => {
+    if (!testId) return
+    try {
+      setIsResettingTest(true)
+      await api.post(`/tests/${testId}/reset`)
+      navigate(`/test/${testId}`)
+      toast.success('Test reset successfully!')
+    } catch (error) {
+      toast.error('Failed to reset test')
+    } finally {
+      setIsResettingTest(false)
+    }
+  }
+
+  // If test is already completed, show CTAs instead of test interface
+  if (test.is_completed) {
+    return (
+      <motion.div
+        className="space-y-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            {test.test_name}
+          </h1>
+          <p className="text-gray-600 text-lg">
+            This test has already been completed
+          </p>
+          {test.score !== null && (
+            <p className="text-2xl font-bold text-sky-600 mt-4">
+              Your Score: {test.score}%
+            </p>
+          )}
+        </div>
+
+        {/* CTAs */}
+        <motion.div className="space-y-3 max-w-md mx-auto w-full">
+          {/* Create Another Version Button */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/create-test')}
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-gradient-coral text-white font-semibold hover:shadow-lg transition-all"
+          >
+            <Copy className="w-5 h-5" />
+            Create Another Version
+          </motion.button>
+
+          {/* Re-take Test Button */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleRetakeTest}
+            disabled={isResettingTest}
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg border-2 border-sky-500 text-sky-600 font-semibold hover:bg-sky-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isResettingTest ? (
+              <>
+                <span className="w-5 h-5 border-2 border-sky-600 border-t-transparent rounded-full animate-spin" />
+                Resetting...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-5 h-5" />
+                Re-take Test
+              </>
+            )}
+          </motion.button>
+
+          {/* Done Button */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/tests')}
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+          >
+            <ArrowRight className="w-5 h-5" />
+            Done
+          </motion.button>
+        </motion.div>
+      </motion.div>
+    )
   }
 
   const currentQuestion = test.questions[currentQuestionIndex]

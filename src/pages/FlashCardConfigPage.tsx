@@ -25,6 +25,7 @@ interface AnalysisResult {
 export default function FlashCardConfigPage() {
   const navigate = useNavigate()
   const [fileData, setFileData] = useState<FileData | null>(null)
+  const [allFiles, setAllFiles] = useState<FileData[]>([])
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -35,19 +36,42 @@ export default function FlashCardConfigPage() {
   const [additionalPrompts, setAdditionalPrompts] = useState('')
 
   useEffect(() => {
-    const uploadedFile = sessionStorage.getItem('uploadedFile')
-    if (!uploadedFile) {
+    // Try multi-file first, fall back to single file for backward compat
+    let uploadedFileStr = sessionStorage.getItem('uploadedFiles')
+    let filesArrayToUse: FileData[] = []
+    let fileDataToUse: FileData | null = null
+
+    if (uploadedFileStr) {
+      try {
+        filesArrayToUse = JSON.parse(uploadedFileStr) as FileData[]
+        if (filesArrayToUse.length > 0) {
+          fileDataToUse = filesArrayToUse[0] // Use first file for analysis
+        }
+      } catch (error) {
+        console.error('Failed to parse uploadedFiles:', error)
+      }
+    }
+
+    // Fall back to single file (backward compat)
+    if (!fileDataToUse) {
+      uploadedFileStr = sessionStorage.getItem('uploadedFile')
+      if (uploadedFileStr) {
+        try {
+          fileDataToUse = JSON.parse(uploadedFileStr) as FileData
+          filesArrayToUse = [fileDataToUse]
+        } catch (error) {
+          console.error('Failed to parse uploadedFile:', error)
+        }
+      }
+    }
+
+    if (!fileDataToUse) {
       navigate('/create-flashcards')
       return
     }
 
-    try {
-      const parsed = JSON.parse(uploadedFile) as FileData
-      setFileData(parsed)
-    } catch (error) {
-      toast.error('Failed to load uploaded file')
-      navigate('/create-flashcards')
-    }
+    setFileData(fileDataToUse)
+    setAllFiles(filesArrayToUse)
   }, [navigate])
 
   // Auto-analyze on file load
@@ -65,9 +89,11 @@ export default function FlashCardConfigPage() {
 
       let response
       if (fileData.uploadType === 'pdf') {
+        // For PDFs, analyze the first one (backend handles one at a time)
         let base64Data: string
         if (typeof fileData.data === 'string') {
-          base64Data = fileData.data
+          const dataStr = fileData.data as string
+          base64Data = dataStr.includes(',') ? dataStr.split(',')[1] : dataStr
         } else {
           const bytes = new Uint8Array(fileData.data as ArrayBuffer)
           let binary = ''
@@ -80,11 +106,16 @@ export default function FlashCardConfigPage() {
           filename: fileData.name,
         })
       } else {
-        const dataUrl = fileData.data as string
-        const base64Data = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
+        // For images, send ALL images in the array
+        const images_base64 = allFiles
+          .filter(f => f.uploadType !== 'pdf')
+          .map((file) => {
+            const dataUrl = file.data as string
+            return dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
+          })
 
         response = await api.post('/scan/analyze', {
-          images_base64: [base64Data],
+          images_base64,
         })
       }
 
@@ -116,10 +147,13 @@ export default function FlashCardConfigPage() {
 
       const response = await api.post('/flashcards/generate', payload)
       sessionStorage.removeItem('uploadedFile')
-      navigate(`/flashcards/${response.data.deck_id}`)
+      sessionStorage.removeItem('uploadedFiles')
+      navigate(`/flashcards/${response.data.id || response.data.deck_id}`)
       toast.success('Flash cards generated successfully!')
-    } catch (error) {
-      toast.error('Failed to generate flash cards')
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail || 'Unknown error'
+      console.error('Generate flashcards error:', error?.response?.data || error)
+      toast.error(`Failed to generate flash cards: ${detail}`)
     } finally {
       setIsGenerating(false)
     }
@@ -136,7 +170,7 @@ export default function FlashCardConfigPage() {
         <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Configure Flash Cards</h1>
         {analysis && (
           <p className="text-sm text-gray-500">
-            {analysis.num_pages || 1} page{(analysis.num_pages || 1) > 1 ? 's' : ''} ready • Customize your deck
+            {allFiles.length} file{allFiles.length > 1 ? 's' : ''} • {analysis.num_pages || 1} page{(analysis.num_pages || 1) > 1 ? 's' : ''} ready • Customize your deck
           </p>
         )}
       </div>

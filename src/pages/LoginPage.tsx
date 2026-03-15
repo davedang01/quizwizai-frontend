@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { Sparkles } from 'lucide-react'
 import { motion } from 'framer-motion'
+import api from '@/utils/api'
+import { toast } from 'sonner'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -15,6 +17,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,6 +38,21 @@ export default function LoginPage() {
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
+    }
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotLoading(true)
+    try {
+      await api.post('/auth/forgot-password', { email })
+      setForgotSent(true)
+      toast.success('Reset link sent! Check your email.')
+    } catch (err: any) {
+      const message = err.response?.data?.detail || 'Failed to send reset email'
+      toast.error(message)
+    } finally {
+      setForgotLoading(false)
     }
   }
 
@@ -154,9 +174,23 @@ export default function LoginPage() {
 
             {/* Password Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(true)
+                      setForgotSent(false)
+                    }}
+                    className="text-xs text-sky-600 hover:text-sky-800 font-medium transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
               <input
                 type="password"
                 value={password}
@@ -208,21 +242,88 @@ export default function LoginPage() {
             </motion.button>
           </form>
 
-          {/* Demo Credentials */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-6 pt-6 border-t border-gray-200"
-          >
-            <p className="text-xs text-gray-500 mb-3">Demo credentials:</p>
-            <div className="space-y-2 text-xs text-gray-600">
-              <p>Email: <code className="bg-gray-100 px-2 py-1 rounded">demo@example.com</code></p>
-              <p>Password: <code className="bg-gray-100 px-2 py-1 rounded">password123</code></p>
-            </div>
-          </motion.div>
         </motion.div>
       </motion.div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowForgotPassword(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {forgotSent ? (
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Check Your Email</h3>
+                <p className="text-gray-600 text-sm">
+                  If an account exists for <strong>{email}</strong>, we've sent a password reset link. Check your inbox (and spam folder).
+                </p>
+                <button
+                  onClick={() => setShowForgotPassword(false)}
+                  className="w-full py-3 px-4 rounded-lg font-semibold text-sky-600 border-2 border-sky-500 hover:bg-sky-50 transition-colors"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Reset Password</h3>
+                <p className="text-gray-600 text-sm mb-6">
+                  Enter your email address and we'll send you a link to reset your password.
+                </p>
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="input-primary"
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {forgotLoading ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Sending...
+                      </span>
+                    ) : (
+                      'Send Reset Link'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(false)}
+                    className="w-full py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </form>
+              </>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   )
 }
