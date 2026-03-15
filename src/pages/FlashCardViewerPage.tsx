@@ -96,7 +96,7 @@ export default function FlashCardViewerPage() {
   return (
     <motion.div
       className="space-y-8"
-      initial={{ opacity: 0 }}
+      initial={false}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >

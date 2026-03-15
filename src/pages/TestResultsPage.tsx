@@ -113,7 +113,7 @@ export default function TestResultsPage() {
     <motion.div
       className="space-y-8"
       variants={containerVariants}
-      initial="hidden"
+      initial={false}
       animate="visible"
     >
       {/* Results Header */}

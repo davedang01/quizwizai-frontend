@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, Zap } from 'lucide-react'
+import { Loader2, Layers } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
-import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { toast } from 'sonner'
 
 interface FileData {
@@ -15,10 +14,12 @@ interface FileData {
 }
 
 interface AnalysisResult {
+  id: string
   subject: string
   topics: string[]
   difficulty: string
   content_text: string
+  num_pages: number
 }
 
 export default function FlashCardConfigPage() {
@@ -30,7 +31,7 @@ export default function FlashCardConfigPage() {
 
   // Form state
   const [deckName, setDeckName] = useState('')
-  const [numCards, setNumCards] = useState('10')
+  const [numCards, setNumCards] = useState(10)
   const [additionalPrompts, setAdditionalPrompts] = useState('')
 
   useEffect(() => {
@@ -49,51 +50,65 @@ export default function FlashCardConfigPage() {
     }
   }, [navigate])
 
+  // Auto-analyze on file load
+  useEffect(() => {
+    if (fileData && !analysis && !isAnalyzing) {
+      handleAnalyze()
+    }
+  }, [fileData])
+
   const handleAnalyze = async () => {
     if (!fileData) return
 
     try {
       setIsAnalyzing(true)
-      const formData = new FormData()
 
+      let response
       if (fileData.uploadType === 'pdf') {
-        const binaryString = atob(fileData.data as string)
-        const bytes = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
+        let base64Data: string
+        if (typeof fileData.data === 'string') {
+          base64Data = fileData.data
+        } else {
+          const bytes = new Uint8Array(fileData.data as ArrayBuffer)
+          let binary = ''
+          bytes.forEach(b => binary += String.fromCharCode(b))
+          base64Data = btoa(binary)
         }
-        const blob = new Blob([bytes], { type: 'application/pdf' })
-        formData.append('file', blob, fileData.name)
 
-        const response = await api.post('/scan/analyze-pdf', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        response = await api.post('/scan/analyze-pdf', {
+          pdf_base64: base64Data,
+          filename: fileData.name,
         })
-        setAnalysis(response.data)
       } else {
-        formData.append('file', fileData.data as string)
-        const response = await api.post('/scan/analyze', formData)
-        setAnalysis(response.data)
+        const dataUrl = fileData.data as string
+        const base64Data = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
+
+        response = await api.post('/scan/analyze', {
+          images_base64: [base64Data],
+        })
       }
 
+      setAnalysis(response.data)
       toast.success('Content analyzed successfully!')
-    } catch (error) {
-      toast.error('Failed to analyze content')
+    } catch (error: any) {
+      console.error('Analysis error:', error?.response?.data || error)
+      toast.error('Failed to analyze content. Please try again.')
     } finally {
       setIsAnalyzing(false)
     }
   }
 
   const handleGenerateFlashCards = async () => {
-    if (!analysis || !deckName) {
-      toast.error('Please fill in all required fields')
+    if (!analysis) {
+      toast.error('Please wait for content analysis to complete')
       return
     }
 
     try {
       setIsGenerating(true)
       const payload = {
-        deck_name: deckName,
-        num_cards: parseInt(numCards),
+        deck_name: deckName || `${analysis.subject} Cards`,
+        num_cards: numCards,
         topics: analysis.topics,
         additional_prompts: additionalPrompts,
         content_text: analysis.content_text,
@@ -110,209 +125,123 @@ export default function FlashCardConfigPage() {
     }
   }
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 },
-    },
-  }
-
   if (!fileData) {
     return null
   }
 
   return (
-    <motion.div
-      className="space-y-8 max-w-3xl"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div className="space-y-6 pb-6">
       {/* Header */}
-      <motion.div className="mb-8" variants={itemVariants}>
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-sky-100 rounded-full mb-4">
-          <Zap className="w-4 h-4 text-sky-600" />
-          <span className="text-sm font-semibold text-sky-600">
-            Configure Flash Cards
-          </span>
-        </div>
-        <h1 className="text-4xl font-bold mb-2">Flash Card Configuration</h1>
-      </motion.div>
-
-      {/* File Preview */}
-      <motion.div className="card p-6" variants={itemVariants}>
-        <h3 className="text-lg font-semibold mb-4">Uploaded File</h3>
-        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-          <div className="w-12 h-12 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0">
-            <Upload className="w-6 h-6 text-sky-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">
-              {fileData.name}
-            </p>
-            <p className="text-sm text-gray-600">
-              {(fileData.size / 1024).toFixed(2)} KB
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Analysis Section */}
-      {!analysis ? (
-        <motion.div className="card p-6" variants={itemVariants}>
-          <h3 className="text-lg font-semibold mb-4">Step 1: Analyze Content</h3>
-          <p className="text-gray-600 mb-6">
-            Let AI analyze your uploaded content to identify topics and difficulty level.
+      <div className="text-center pt-2">
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Configure Flash Cards</h1>
+        {analysis && (
+          <p className="text-sm text-gray-500">
+            {analysis.num_pages || 1} page{(analysis.num_pages || 1) > 1 ? 's' : ''} ready • Customize your deck
           </p>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleAnalyze}
-            disabled={isAnalyzing}
-            className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all disabled:opacity-50"
-          >
-            {isAnalyzing ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Analyzing...
-              </span>
-            ) : (
-              'Analyze Content'
-            )}
-          </motion.button>
-        </motion.div>
-      ) : (
-        <>
-          {/* Analysis Results */}
-          <motion.div className="card p-6" variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-4">Analysis Results</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subject
-                </label>
-                <p className="px-4 py-3 rounded-lg bg-gray-50 font-medium text-gray-900">
-                  {analysis.subject}
-                </p>
-              </div>
+        )}
+      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Detected Topics
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {analysis.topics.map((topic) => (
-                    <span
-                      key={topic}
-                      className="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-sm font-medium"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Suggested Difficulty
-                </label>
-                <p className="px-4 py-3 rounded-lg bg-gray-50 font-medium text-gray-900 capitalize">
-                  {analysis.difficulty}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Configuration Form */}
-          <motion.div className="card p-6" variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-6">Step 2: Configure Deck</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Deck Name *
-                </label>
-                <input
-                  type="text"
-                  value={deckName}
-                  onChange={(e) => setDeckName(e.target.value)}
-                  className="input-primary"
-                  placeholder="e.g., Biology Chapter 5"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of Cards
-                </label>
-                <select
-                  value={numCards}
-                  onChange={(e) => setNumCards(e.target.value)}
-                  className="input-primary"
-                >
-                  <option value="5">5 Cards</option>
-                  <option value="10">10 Cards</option>
-                  <option value="15">15 Cards</option>
-                  <option value="20">20 Cards</option>
-                  <option value="30">30 Cards</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Additional Prompts (Optional)
-                </label>
-                <textarea
-                  value={additionalPrompts}
-                  onChange={(e) => setAdditionalPrompts(e.target.value)}
-                  className="input-primary resize-none h-24"
-                  placeholder="Any specific focus areas or instructions for card generation..."
-                />
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Generate Button */}
-          <motion.div variants={itemVariants} className="flex gap-4">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/create-flashcards')}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold border-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
-            >
-              Back
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleGenerateFlashCards}
-              disabled={isGenerating || !deckName}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all disabled:opacity-50"
-            >
-              {isGenerating ? (
-                <span className="inline-flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Generating Cards...
-                </span>
-              ) : (
-                'Generate Flash Cards'
-              )}
-            </motion.button>
-          </motion.div>
-        </>
+      {/* Analyzing Banner */}
+      {isAnalyzing && (
+        <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-center gap-3">
+          <Loader2 className="w-5 h-5 text-sky-600 animate-spin" />
+          <div>
+            <p className="font-semibold text-sky-800 text-sm">Analyzing your photos...</p>
+            <p className="text-sky-600 text-xs">This may take a few seconds</p>
+          </div>
+        </div>
       )}
-    </motion.div>
+
+      {/* Analysis failed - retry */}
+      {!isAnalyzing && !analysis && fileData && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+          <p className="font-semibold text-red-800 text-sm mb-2">Analysis failed</p>
+          <button
+            onClick={handleAnalyze}
+            className="text-sm text-red-700 underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Configuration Form */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-6">
+        {/* Deck Name */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-2">Deck Name *</label>
+          <input
+            type="text"
+            value={deckName}
+            onChange={(e) => setDeckName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+            placeholder="e.g., Biology Chapter 3 Terms"
+          />
+        </div>
+
+        {/* Number of Cards - Slider */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-3">Number of Cards</label>
+          <div className="bg-gray-50 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-600">Cards:</span>
+              <span className="text-2xl font-bold text-rose-500">{numCards}</span>
+            </div>
+            <input
+              type="range"
+              min={5}
+              max={30}
+              value={numCards}
+              onChange={(e) => setNumCards(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
+            />
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>5</span>
+              <span>30</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Prompts */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-2">Additional Prompts</label>
+          <textarea
+            value={additionalPrompts}
+            onChange={(e) => {
+              if (e.target.value.length <= 1500) {
+                setAdditionalPrompts(e.target.value)
+              }
+            }}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all resize-none h-28"
+            placeholder="e.g., Focus on definitions, include examples..."
+          />
+          <div className="flex justify-between items-center mt-1">
+            <p className="text-xs text-gray-400">Add any additional instructions to the AI test creation tool (optional)</p>
+            <span className="text-xs text-gray-400">{additionalPrompts.length}/1500</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Create Flash Cards Button */}
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={handleGenerateFlashCards}
+        disabled={isGenerating || isAnalyzing || !analysis}
+        className="w-full py-4 rounded-2xl font-bold text-white text-lg bg-gradient-coral hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Generating Cards...
+          </>
+        ) : (
+          <>
+            <Layers className="w-5 h-5" />
+            Create Flash Cards
+          </>
+        )}
+      </motion.button>
+    </div>
   )
 }

@@ -135,7 +135,7 @@ export default function AiTutorPage() {
   return (
     <motion.div
       className="flex flex-col h-[calc(100vh-8rem)] -mx-4 -mt-4"
-      initial={{ opacity: 0 }}
+      initial={false}
       animate={{ opacity: 1 }}
     >
       {/* Header */}
@@ -222,13 +222,13 @@ export default function AiTutorPage() {
               className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl ${
                 msg.role === 'user'
                   ? 'bg-sky-500 text-white rounded-br-md'
-                  : 'bg-gray-100 text-gray-900 rounded-bl-md'
+                  : 'bg-gray-100 text-gray-800 rounded-bl-md'
               }`}
             >
               <p className="text-sm leading-relaxed">{msg.content}</p>
               <p
                 className={`text-[10px] mt-1 ${
-                  msg.role === 'user' ? 'text-white/60' : 'text-gray-400'
+                  msg.role === 'user' ? 'text-white/60' : 'text-gray-500'
                 }`}
               >
                 {new Date(msg.timestamp).toLocaleTimeString('en-US', {

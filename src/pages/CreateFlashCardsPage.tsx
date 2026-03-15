@@ -29,11 +29,7 @@ export default function CreateFlashCardsPage() {
       navigate('/flashcard-config')
     }
 
-    if (type === 'pdf') {
-      reader.readAsArrayBuffer(file)
-    } else {
-      reader.readAsDataURL(file)
-    }
+    reader.readAsDataURL(file)
   }
 
   const containerVariants = {
@@ -60,7 +56,7 @@ export default function CreateFlashCardsPage() {
     <motion.div
       className="space-y-6"
       variants={containerVariants}
-      initial="hidden"
+      initial={false}
       animate="visible"
     >
       {/* Header */}

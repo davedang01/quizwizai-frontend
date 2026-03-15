@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, Zap } from 'lucide-react'
+import { Loader2, CheckCircle, BookOpen, Calculator, PenLine, Shuffle, Brain, Zap } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
-import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { toast } from 'sonner'
 
 interface FileData {
@@ -15,11 +14,27 @@ interface FileData {
 }
 
 interface AnalysisResult {
+  id: string
   subject: string
   topics: string[]
   difficulty: string
   content_text: string
+  num_pages: number
 }
+
+const quizTypes = [
+  { value: 'multiple-choice', label: 'Multiple Choice', description: 'Best for specific answers', icon: CheckCircle },
+  { value: 'word-problems', label: 'Word Problems', description: 'Best for showing understanding & comprehension', icon: BookOpen },
+  { value: 'fill-in-the-blank', label: 'Fill in the Blank', description: 'Complete sentences with missing words', icon: PenLine },
+  { value: 'mixed', label: 'Mixed', description: 'Mix it up!', icon: Shuffle },
+  { value: 'math-problems', label: 'Math Problems', description: 'For Math Subjects Only', icon: Calculator },
+]
+
+const difficulties = [
+  { value: 'easy', label: 'Easy' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'hard', label: 'Hard' },
+]
 
 export default function TestConfigPage() {
   const navigate = useNavigate()
@@ -32,7 +47,7 @@ export default function TestConfigPage() {
   const [testName, setTestName] = useState('')
   const [testType, setTestType] = useState('multiple-choice')
   const [difficulty, setDifficulty] = useState('medium')
-  const [numQuestions, setNumQuestions] = useState('10')
+  const [numQuestions, setNumQuestions] = useState(5)
   const [additionalPrompts, setAdditionalPrompts] = useState('')
 
   useEffect(() => {
@@ -51,53 +66,71 @@ export default function TestConfigPage() {
     }
   }, [navigate])
 
+  // Auto-analyze on file load
+  useEffect(() => {
+    if (fileData && !analysis && !isAnalyzing) {
+      handleAnalyze()
+    }
+  }, [fileData])
+
   const handleAnalyze = async () => {
     if (!fileData) return
 
     try {
       setIsAnalyzing(true)
-      const formData = new FormData()
 
+      let response
       if (fileData.uploadType === 'pdf') {
-        const binaryString = atob(fileData.data as string)
-        const bytes = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
+        // For PDFs: data is an ArrayBuffer stored as base64 via JSON serialization
+        // Convert ArrayBuffer to base64 string
+        let base64Data: string
+        if (typeof fileData.data === 'string') {
+          base64Data = fileData.data
+        } else {
+          const bytes = new Uint8Array(fileData.data as ArrayBuffer)
+          let binary = ''
+          bytes.forEach(b => binary += String.fromCharCode(b))
+          base64Data = btoa(binary)
         }
-        const blob = new Blob([bytes], { type: 'application/pdf' })
-        formData.append('file', blob, fileData.name)
 
-        const response = await api.post('/scan/analyze-pdf', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        response = await api.post('/scan/analyze-pdf', {
+          pdf_base64: base64Data,
+          filename: fileData.name,
         })
-        setAnalysis(response.data)
       } else {
-        formData.append('file', fileData.data as string)
-        const response = await api.post('/scan/analyze', formData)
-        setAnalysis(response.data)
+        // For images: data is a data URL like "data:image/png;base64,..."
+        const dataUrl = fileData.data as string
+        // Extract just the base64 portion if it's a data URL
+        const base64Data = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
+
+        response = await api.post('/scan/analyze', {
+          images_base64: [base64Data],
+        })
       }
 
+      setAnalysis(response.data)
       toast.success('Content analyzed successfully!')
-    } catch (error) {
-      toast.error('Failed to analyze content')
+    } catch (error: any) {
+      console.error('Analysis error:', error?.response?.data || error)
+      toast.error('Failed to analyze content. Please try again.')
     } finally {
       setIsAnalyzing(false)
     }
   }
 
   const handleGenerateTest = async () => {
-    if (!analysis || !testName) {
-      toast.error('Please fill in all required fields')
+    if (!analysis) {
+      toast.error('Please wait for content analysis to complete')
       return
     }
 
     try {
       setIsGenerating(true)
       const payload = {
-        test_name: testName,
+        test_name: testName || `${analysis.subject} Quiz`,
         test_type: testType,
-        difficulty: difficulty || analysis.difficulty,
-        num_questions: parseInt(numQuestions),
+        difficulty: difficulty,
+        num_questions: numQuestions,
         topics: analysis.topics,
         additional_prompts: additionalPrompts,
         content_text: analysis.content_text,
@@ -114,244 +147,193 @@ export default function TestConfigPage() {
     }
   }
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 },
-    },
-  }
-
   if (!fileData) {
     return null
   }
 
   return (
-    <motion.div
-      className="space-y-8 max-w-3xl"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div className="space-y-6 pb-6">
       {/* Header */}
-      <motion.div className="mb-8" variants={itemVariants}>
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-sky-100 rounded-full mb-4">
-          <Zap className="w-4 h-4 text-sky-600" />
-          <span className="text-sm font-semibold text-sky-600">
-            Configure Your Test
-          </span>
-        </div>
-        <h1 className="text-4xl font-bold mb-2">Test Configuration</h1>
-      </motion.div>
-
-      {/* File Preview */}
-      <motion.div className="card p-6" variants={itemVariants}>
-        <h3 className="text-lg font-semibold mb-4">Uploaded File</h3>
-        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-          <div className="w-12 h-12 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0">
-            {fileData.uploadType === 'pdf' ? (
-              <Upload className="w-6 h-6 text-sky-600" />
-            ) : (
-              <Upload className="w-6 h-6 text-sky-600" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">
-              {fileData.name}
-            </p>
-            <p className="text-sm text-gray-600">
-              {(fileData.size / 1024).toFixed(2)} KB
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Analysis Section */}
-      {!analysis ? (
-        <motion.div className="card p-6" variants={itemVariants}>
-          <h3 className="text-lg font-semibold mb-4">Step 1: Analyze Content</h3>
-          <p className="text-gray-600 mb-6">
-            Let AI analyze your uploaded content to identify topics and difficulty level.
+      <div className="text-center pt-2">
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Configure Your Test</h1>
+        {analysis && (
+          <p className="text-sm text-gray-500">
+            {analysis.num_pages || 1} page{(analysis.num_pages || 1) > 1 ? 's' : ''} ready • Customize your quiz settings
           </p>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleAnalyze}
-            disabled={isAnalyzing}
-            className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all disabled:opacity-50"
-          >
-            {isAnalyzing ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Analyzing...
-              </span>
-            ) : (
-              'Analyze Content'
-            )}
-          </motion.button>
-        </motion.div>
-      ) : (
-        <>
-          {/* Analysis Results */}
-          <motion.div className="card p-6" variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-4">Analysis Results</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subject
-                </label>
-                <p className="px-4 py-3 rounded-lg bg-gray-50 font-medium text-gray-900">
-                  {analysis.subject}
-                </p>
-              </div>
+        )}
+      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Detected Topics
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {analysis.topics.map((topic) => (
-                    <span
-                      key={topic}
-                      className="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-sm font-medium"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Suggested Difficulty
-                </label>
-                <p className="px-4 py-3 rounded-lg bg-gray-50 font-medium text-gray-900 capitalize">
-                  {analysis.difficulty}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Configuration Form */}
-          <motion.div className="card p-6" variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-6">Step 2: Configure Test</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Test Name *
-                </label>
-                <input
-                  type="text"
-                  value={testName}
-                  onChange={(e) => setTestName(e.target.value)}
-                  className="input-primary"
-                  placeholder="e.g., Biology Chapter 5 Quiz"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Test Type
-                  </label>
-                  <select
-                    value={testType}
-                    onChange={(e) => setTestType(e.target.value)}
-                    className="input-primary"
-                  >
-                    <option value="multiple-choice">Multiple Choice</option>
-                    <option value="short-answer">Short Answer</option>
-                    <option value="mixed">Mixed</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Difficulty
-                  </label>
-                  <select
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value)}
-                    className="input-primary"
-                  >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of Questions
-                </label>
-                <select
-                  value={numQuestions}
-                  onChange={(e) => setNumQuestions(e.target.value)}
-                  className="input-primary"
-                >
-                  <option value="5">5 Questions</option>
-                  <option value="10">10 Questions</option>
-                  <option value="15">15 Questions</option>
-                  <option value="20">20 Questions</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Additional Instructions (Optional)
-                </label>
-                <textarea
-                  value={additionalPrompts}
-                  onChange={(e) => setAdditionalPrompts(e.target.value)}
-                  className="input-primary resize-none h-24"
-                  placeholder="Any specific focus areas or instructions for test generation..."
-                />
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Generate Button */}
-          <motion.div variants={itemVariants} className="flex gap-4">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/create-test')}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold border-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
-            >
-              Back
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleGenerateTest}
-              disabled={isGenerating || !testName}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all disabled:opacity-50"
-            >
-              {isGenerating ? (
-                <span className="inline-flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Generating Test...
-                </span>
-              ) : (
-                'Generate Test'
-              )}
-            </motion.button>
-          </motion.div>
-        </>
+      {/* Analyzing Banner */}
+      {isAnalyzing && (
+        <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-center gap-3">
+          <Loader2 className="w-5 h-5 text-sky-600 animate-spin" />
+          <div>
+            <p className="font-semibold text-sky-800 text-sm">Analyzing your photos...</p>
+            <p className="text-sky-600 text-xs">This may take a few seconds</p>
+          </div>
+        </div>
       )}
-    </motion.div>
+
+      {/* Analysis failed - retry */}
+      {!isAnalyzing && !analysis && fileData && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+          <p className="font-semibold text-red-800 text-sm mb-2">Analysis failed</p>
+          <button
+            onClick={handleAnalyze}
+            className="text-sm text-red-700 underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Configuration Form */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-6">
+        {/* Test Name */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-2">Test Name *</label>
+          <input
+            type="text"
+            value={testName}
+            onChange={(e) => setTestName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+            placeholder="e.g., Chapter 5 Math Quiz"
+          />
+        </div>
+
+        {/* Level of Difficulty */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-3">Level of Difficulty</label>
+          <div className="grid grid-cols-3 gap-3">
+            {difficulties.map((d) => (
+              <button
+                key={d.value}
+                onClick={() => setDifficulty(d.value)}
+                className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
+                  difficulty === d.value
+                    ? 'bg-sky-500 text-white shadow-md'
+                    : 'bg-gray-50 text-gray-700 border border-gray-200 hover:border-sky-300'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Quiz Type */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-3">Quiz Type</label>
+          <div className="grid grid-cols-2 gap-3">
+            {quizTypes.map((qt) => {
+              const Icon = qt.icon
+              return (
+                <button
+                  key={qt.value}
+                  onClick={() => setTestType(qt.value)}
+                  className={`p-4 rounded-xl text-left transition-all ${
+                    testType === qt.value
+                      ? 'bg-sky-50 border-2 border-sky-500 shadow-sm'
+                      : 'bg-gray-50 border-2 border-transparent hover:border-gray-200'
+                  }`}
+                >
+                  <Icon className={`w-6 h-6 mb-2 ${testType === qt.value ? 'text-sky-600' : 'text-gray-400'}`} />
+                  <p className={`text-sm font-semibold ${testType === qt.value ? 'text-sky-700' : 'text-gray-700'}`}>
+                    {qt.label}
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">{qt.description}</p>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Number of Questions - Slider */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-3">Number of Questions</label>
+          <div className="bg-gray-50 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-600">Questions:</span>
+              <span className="text-2xl font-bold text-sky-600">{numQuestions}</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={20}
+              value={numQuestions}
+              onChange={(e) => setNumQuestions(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-sky-500"
+            />
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>1</span>
+              <span>20</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Prompts */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-2">Additional Prompts</label>
+          <textarea
+            value={additionalPrompts}
+            onChange={(e) => {
+              if (e.target.value.length <= 500) {
+                setAdditionalPrompts(e.target.value)
+              }
+            }}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all resize-none h-28"
+            placeholder="e.g., Focus on chapter 5 vocabulary, include word problems..."
+          />
+          <div className="flex justify-between items-center mt-1">
+            <p className="text-xs text-gray-400">Add any additional instructions to the AI test creation tool (optional)</p>
+            <span className="text-xs text-gray-400">{additionalPrompts.length}/500</span>
+          </div>
+        </div>
+
+        {/* Test Output */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-3">Test Output</label>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-sky-50 border-2 border-sky-500 text-center">
+              <Brain className="w-6 h-6 text-sky-600 mx-auto mb-1" />
+              <p className="text-xs font-semibold text-sky-700">In-App Test</p>
+              <p className="text-[10px] text-gray-500">Take test in the app</p>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50 border-2 border-gray-200 text-center opacity-50">
+              <PenLine className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+              <p className="text-xs font-semibold text-gray-500">Print Test PDF</p>
+              <p className="text-[10px] text-gray-400">Generate & print PDF</p>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50 border-2 border-gray-200 text-center opacity-50">
+              <PenLine className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+              <p className="text-xs font-semibold text-gray-500">Email Test PDF</p>
+              <p className="text-[10px] text-gray-400">Generate & email PDF</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Create Test Button */}
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={handleGenerateTest}
+        disabled={isGenerating || isAnalyzing || !analysis}
+        className="w-full py-4 rounded-2xl font-bold text-white text-lg bg-gradient-coral hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Generating Test...
+          </>
+        ) : (
+          <>
+            <Zap className="w-5 h-5" />
+            Create Test
+          </>
+        )}
+      </motion.button>
+    </div>
   )
 }
+

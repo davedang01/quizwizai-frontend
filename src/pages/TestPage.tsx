@@ -108,7 +108,7 @@ export default function TestPage() {
     <motion.div
       className="space-y-6"
       variants={containerVariants}
-      initial="hidden"
+      initial={false}
       animate="visible"
     >
       {/* Header */}

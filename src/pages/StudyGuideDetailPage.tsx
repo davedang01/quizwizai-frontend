@@ -91,7 +91,7 @@ export default function StudyGuideDetailPage() {
     <motion.div
       className="space-y-8"
       variants={containerVariants}
-      initial="hidden"
+      initial={false}
       animate="visible"
     >
       {/* Header */}

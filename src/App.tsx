@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
@@ -28,10 +28,27 @@ function App() {
     checkAuth()
   }, [checkAuth])
 
+  const [showColdStartMsg, setShowColdStartMsg] = useState(false)
+
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => setShowColdStartMsg(true), 10000)
+      return () => clearTimeout(timer)
+    } else {
+      setShowColdStartMsg(false)
+    }
+  }, [isLoading])
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 gap-4">
         <LoadingSpinner size="lg" color="sky" />
+        {showColdStartMsg && (
+          <div className="text-center px-6">
+            <p className="text-sm font-semibold text-gray-700">Server is waking up, please wait...</p>
+            <p className="text-xs text-gray-500 mt-1">This can take up to 60 seconds on the first visit</p>
+          </div>
+        )}
       </div>
     )
   }

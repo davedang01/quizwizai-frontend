@@ -59,7 +59,7 @@ export default function LoginPage() {
       <motion.div
         className="w-full max-w-md"
         variants={containerVariants}
-        initial="hidden"
+        initial={false}
         animate="visible"
       >
         {/* Header */}
