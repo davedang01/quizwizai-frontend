@@ -18,6 +18,8 @@ export default function ManualFlashCardsPage() {
     { id: '1', front: '', back: '' },
     { id: '2', front: '', back: '' },
     { id: '3', front: '', back: '' },
+    { id: '4', front: '', back: '' },
+    { id: '5', front: '', back: '' },
   ])
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -141,30 +143,30 @@ export default function ManualFlashCardsPage() {
 
               {/* Card Inputs */}
               <div className="flex-1 space-y-4">
-                {/* Front (Term) */}
+                {/* Question */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Front (Term)
+                    Question
                   </label>
                   <input
                     type="text"
                     value={card.front}
                     onChange={(e) => updateCard(card.id, 'front', e.target.value)}
                     className="input-primary"
-                    placeholder="Enter the term or question"
+                    placeholder="Enter your question"
                   />
                 </div>
 
-                {/* Back (Definition) */}
+                {/* Answer */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Back (Definition)
+                    Answer
                   </label>
                   <textarea
                     value={card.back}
                     onChange={(e) => updateCard(card.id, 'back', e.target.value)}
                     className="input-primary resize-none h-20"
-                    placeholder="Enter the definition or answer"
+                    placeholder="Enter the answer"
                   />
                 </div>
               </div>
