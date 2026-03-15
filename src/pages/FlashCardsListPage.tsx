@@ -62,7 +62,7 @@ export default function FlashCardsListPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" color="purple" />
+        <LoadingSpinner size="lg" color="sky" />
       </div>
     )
   }
@@ -90,7 +90,7 @@ export default function FlashCardsListPage() {
           whileHover={{ scale: 1.05, y: -2 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => navigate('/create-flashcards')}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-pink-purple text-white font-semibold hover:shadow-lg transition-all"
+          className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
         >
           <Plus className="w-5 h-5" />
           Create New Deck
@@ -126,7 +126,7 @@ export default function FlashCardsListPage() {
 
               {/* Card Content */}
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-lg bg-gradient-purple-pink flex items-center justify-center flex-shrink-0 group-hover:shadow-lg transition-all">
+                <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0 group-hover:shadow-lg transition-all">
                   <Layers className="w-6 h-6 text-white" />
                 </div>
 
@@ -157,8 +157,8 @@ export default function FlashCardsListPage() {
             transition={{ delay: 0.3 }}
             className="inline-block mb-4"
           >
-            <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center mx-auto">
-              <Layers className="w-10 h-10 text-purple-600" />
+            <div className="w-20 h-20 rounded-full bg-sky-100 flex items-center justify-center mx-auto">
+              <Layers className="w-10 h-10 text-sky-600" />
             </div>
           </motion.div>
 
@@ -173,7 +173,7 @@ export default function FlashCardsListPage() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/create-flashcards')}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-purple-pink text-white font-semibold hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
           >
             <Plus className="w-5 h-5" />
             Create your first deck

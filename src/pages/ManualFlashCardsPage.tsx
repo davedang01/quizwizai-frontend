@@ -136,7 +136,7 @@ export default function ManualFlashCardsPage() {
             <div className="flex items-start gap-4">
               {/* Card Number */}
               <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-lg bg-gradient-purple-pink flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center text-white font-bold">
                   {idx + 1}
                 </div>
               </div>
@@ -193,7 +193,7 @@ export default function ManualFlashCardsPage() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={addCard}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-purple-300 text-purple-600 font-semibold hover:bg-purple-50 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-sky-300 text-sky-600 font-semibold hover:bg-sky-50 transition-colors"
         >
           <Plus className="w-5 h-5" />
           Add Card
@@ -215,7 +215,7 @@ export default function ManualFlashCardsPage() {
           whileTap={{ scale: 0.98 }}
           onClick={handleCreateDeck}
           disabled={isGenerating || !deckName.trim()}
-          className="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-purple-pink hover:shadow-lg transition-all disabled:opacity-50"
+          className="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all disabled:opacity-50"
         >
           {isGenerating ? (
             <span className="inline-flex items-center justify-center gap-2">

@@ -90,7 +90,7 @@ export default function MyTestsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" color="purple" />
+        <LoadingSpinner size="lg" color="sky" />
       </div>
     )
   }
@@ -117,7 +117,7 @@ export default function MyTestsPage() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/create-test')}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-pink text-white font-semibold hover:shadow-lg transition-all w-full md:w-auto"
+          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-coral text-white font-semibold hover:shadow-lg transition-all w-full md:w-auto"
         >
           <Plus className="w-5 h-5" />
           New Test
@@ -141,7 +141,7 @@ export default function MyTestsPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/create-test')}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-purple-pink text-white font-semibold hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
           >
             <Plus className="w-5 h-5" />
             Create Test
@@ -192,7 +192,7 @@ export default function MyTestsPage() {
                   <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
                     {test.test_type}
                   </span>
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-sky-100 text-sky-700">
                     {test.total_questions} questions
                   </span>
                 </div>

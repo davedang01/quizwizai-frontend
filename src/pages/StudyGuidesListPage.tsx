@@ -51,7 +51,7 @@ export default function StudyGuidesListPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" color="purple" />
+        <LoadingSpinner size="lg" color="sky" />
       </div>
     )
   }
@@ -125,7 +125,7 @@ export default function StudyGuidesListPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate(`/study-guide/${result.id}`)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-purple-pink text-white font-semibold hover:shadow-lg transition-all"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
                   >
                     <span>Study</span>
                     <ArrowRight className="w-4 h-4" />
@@ -147,8 +147,8 @@ export default function StudyGuidesListPage() {
             transition={{ delay: 0.3 }}
             className="inline-block mb-4"
           >
-            <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center mx-auto">
-              <BookOpen className="w-10 h-10 text-purple-600" />
+            <div className="w-20 h-20 rounded-full bg-sky-100 flex items-center justify-center mx-auto">
+              <BookOpen className="w-10 h-10 text-sky-600" />
             </div>
           </motion.div>
 
@@ -163,7 +163,7 @@ export default function StudyGuidesListPage() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/create-test')}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-purple-pink text-white font-semibold hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
           >
             <BookOpen className="w-5 h-5" />
             Create your first test

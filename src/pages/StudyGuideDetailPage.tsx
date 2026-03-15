@@ -74,11 +74,11 @@ export default function StudyGuideDetailPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         {isGenerating && (
           <>
-            <LoadingSpinner size="lg" color="purple" />
+            <LoadingSpinner size="lg" color="sky" />
             <p className="text-gray-600">Generating your personalized study guide...</p>
           </>
         )}
-        {!isGenerating && <LoadingSpinner size="lg" color="purple" />}
+        {!isGenerating && <LoadingSpinner size="lg" color="sky" />}
       </div>
     )
   }
@@ -214,12 +214,12 @@ export default function StudyGuideDetailPage() {
                   transition={{ delay: 0.5 }}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <HelpCircle className="w-5 h-5 text-purple-600" />
+                    <HelpCircle className="w-5 h-5 text-sky-600" />
                     <h4 className="font-semibold text-gray-900">
                       Practice Question
                     </h4>
                   </div>
-                  <div className="bg-purple-50 border-l-4 border-purple-400 p-4 rounded-lg">
+                  <div className="bg-sky-50 border-l-4 border-sky-400 p-4 rounded-lg">
                     <p className="text-gray-700 text-sm leading-relaxed">
                       {entry.practice_question}
                     </p>
@@ -246,7 +246,7 @@ export default function StudyGuideDetailPage() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/study-guide')}
-          className="flex-1 py-3 px-4 rounded-lg font-semibold border-2 border-purple-600 text-purple-600 hover:bg-purple-50 transition-colors"
+          className="flex-1 py-3 px-4 rounded-lg font-semibold border-2 border-sky-500 text-sky-600 hover:bg-sky-50 transition-colors"
         >
           Back to Study Guides
         </motion.button>
@@ -254,7 +254,7 @@ export default function StudyGuideDetailPage() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/tests')}
-          className="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-purple-pink hover:shadow-lg transition-all"
+          className="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all"
         >
           View All Tests
         </motion.button>

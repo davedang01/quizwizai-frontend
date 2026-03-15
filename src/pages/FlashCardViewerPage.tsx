@@ -81,7 +81,7 @@ export default function FlashCardViewerPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" color="purple" />
+        <LoadingSpinner size="lg" color="sky" />
       </div>
     )
   }
@@ -154,7 +154,7 @@ export default function FlashCardViewerPage() {
         transition={{ delay: 0.2 }}
       >
         <motion.div
-          className="h-full bg-gradient-purple-pink"
+          className="h-full bg-gradient-primary"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.5, ease: 'easeInOut' }}
@@ -185,7 +185,7 @@ export default function FlashCardViewerPage() {
           >
             {/* Front of Card */}
             <div
-              className="absolute w-full h-full bg-gradient-purple-pink rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer shadow-xl"
+              className="absolute w-full h-full bg-gradient-primary rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer shadow-xl"
               style={{
                 backfaceVisibility: 'hidden',
               }}
@@ -204,7 +204,7 @@ export default function FlashCardViewerPage() {
 
             {/* Back of Card */}
             <div
-              className="absolute w-full h-full bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-600 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer shadow-xl"
+              className="absolute w-full h-full bg-gradient-to-br from-sky-400 via-sky-500 to-blue-600 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer shadow-xl"
               style={{
                 backfaceVisibility: 'hidden',
                 transform: 'rotateY(180deg)',

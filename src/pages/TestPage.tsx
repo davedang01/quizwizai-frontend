@@ -41,7 +41,7 @@ export default function TestPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" color="purple" />
+        <LoadingSpinner size="lg" color="sky" />
       </div>
     )
   }
@@ -130,7 +130,7 @@ export default function TestPage() {
         {/* Progress Bar */}
         <motion.div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-purple-pink"
+            className="h-full bg-gradient-primary"
             initial={{ width: 0 }}
             animate={{ width: `${((currentQuestionIndex + 1) / test.total_questions) * 100}%` }}
             transition={{ duration: 0.3 }}
@@ -148,7 +148,7 @@ export default function TestPage() {
             onClick={() => setCurrentQuestionIndex(idx)}
             className={`px-3 py-2 rounded-lg font-medium transition-all ${
               idx === currentQuestionIndex
-                ? 'bg-gradient-purple-pink text-white shadow-md'
+                ? 'bg-gradient-primary text-white shadow-md'
                 : userAnswers[q.id]
                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -176,7 +176,7 @@ export default function TestPage() {
             transition={{ delay: 0.1 }}
             className="mb-8"
           >
-            <div className="inline-block px-4 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold mb-4">
+            <div className="inline-block px-4 py-1 bg-sky-100 text-sky-700 rounded-full text-sm font-semibold mb-4">
               Question {currentQuestionIndex + 1}
             </div>
             <h2 className="text-2xl font-bold text-gray-900">
@@ -197,7 +197,7 @@ export default function TestPage() {
                 <motion.label
                   key={idx}
                   whileHover={{ x: 5 }}
-                  className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-purple-500 hover:bg-purple-50"
+                  className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-sky-500 hover:bg-sky-50"
                   style={{
                     borderColor:
                       userAnswers[currentQuestion.id] === option
@@ -269,7 +269,7 @@ export default function TestPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setShowReview(true)}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-purple-pink text-white font-semibold hover:shadow-lg transition-all"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
           >
             <Eye className="w-5 h-5" />
             Review & Submit
@@ -297,7 +297,7 @@ export default function TestPage() {
               <h2 className="text-2xl font-bold mb-6">Review Test</h2>
 
               {/* Summary */}
-              <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
+              <div className="mb-6 p-4 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-2">Test Summary</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {answeredCount}/{test.total_questions} answered
@@ -331,7 +331,7 @@ export default function TestPage() {
                     {userAnswers[q.id] && (
                       <p className="text-sm">
                         <span className="text-gray-600">Your answer: </span>
-                        <span className="font-semibold text-purple-600">
+                        <span className="font-semibold text-sky-600">
                           {userAnswers[q.id]}
                         </span>
                       </p>
@@ -355,7 +355,7 @@ export default function TestPage() {
                   whileTap={{ scale: 0.98 }}
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-3 rounded-lg bg-gradient-purple-pink text-white font-semibold hover:shadow-lg disabled:opacity-50"
+                  className="flex-1 px-4 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <span className="inline-flex items-center justify-center gap-2">

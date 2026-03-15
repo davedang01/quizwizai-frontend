@@ -31,7 +31,7 @@ function App() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <LoadingSpinner size="lg" color="purple" />
+        <LoadingSpinner size="lg" color="sky" />
       </div>
     )
   }

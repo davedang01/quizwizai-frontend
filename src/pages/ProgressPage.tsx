@@ -38,7 +38,7 @@ export default function ProgressPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" color="purple" />
+        <LoadingSpinner size="lg" color="sky" />
       </div>
     )
   }
@@ -76,9 +76,9 @@ export default function ProgressPage() {
     >
       {/* Header */}
       <motion.div className="mb-8" variants={itemVariants}>
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-full mb-4">
-          <TrendingUp className="w-4 h-4 text-purple-600" />
-          <span className="text-sm font-semibold text-purple-600">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-sky-100 rounded-full mb-4">
+          <TrendingUp className="w-4 h-4 text-sky-600" />
+          <span className="text-sm font-semibold text-sky-600">
             Your Learning Journey
           </span>
         </div>
@@ -100,8 +100,8 @@ export default function ProgressPage() {
           variants={itemVariants}
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-purple-600" />
+            <div className="w-10 h-10 rounded-lg bg-sky-100 flex items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 text-sky-600" />
             </div>
             <p className="text-gray-600 text-sm">Total Tests</p>
           </div>
@@ -212,7 +212,7 @@ export default function ProgressPage() {
             <h2 className="text-2xl font-bold">Test History</h2>
             <button
               onClick={() => navigate('/tests')}
-              className="flex items-center gap-1 text-purple-600 hover:text-purple-700 font-semibold"
+              className="flex items-center gap-1 text-sky-600 hover:text-sky-700 font-semibold"
             >
               View All <ArrowRight className="w-4 h-4" />
             </button>
@@ -295,7 +295,7 @@ export default function ProgressPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/create-test')}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-purple-pink text-white font-semibold hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
           >
             <CheckCircle2 className="w-5 h-5" />
             Create Test

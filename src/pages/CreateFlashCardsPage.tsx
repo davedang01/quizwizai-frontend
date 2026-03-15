@@ -58,47 +58,42 @@ export default function CreateFlashCardsPage() {
 
   return (
     <motion.div
-      className="space-y-8"
+      className="space-y-6"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       {/* Header */}
-      <motion.div className="mb-8" variants={itemVariants}>
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-full mb-4">
-          <Zap className="w-4 h-4 text-purple-600" />
-          <span className="text-sm font-semibold text-purple-600">
+      <motion.div className="mb-6" variants={itemVariants}>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-sky-100 rounded-full mb-3">
+          <Zap className="w-3.5 h-3.5 text-sky-600" />
+          <span className="text-xs font-semibold text-sky-600">
             AI-Powered Flash Cards
           </span>
         </div>
-        <h1 className="text-4xl font-bold mb-2">Create Flash Cards</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold mb-1">Create Flash Cards</h1>
+        <p className="text-gray-600 text-sm">
           Upload your study material or create cards manually
         </p>
       </motion.div>
 
       {/* Action Cards */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        className="grid grid-cols-2 gap-3"
         variants={containerVariants}
       >
         {/* Scan Photo */}
         <motion.div variants={itemVariants}>
           <motion.button
-            whileHover={{ scale: 1.05, y: -10 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => cameraInputRef.current?.click()}
-            className="w-full card-gradient bg-gradient-purple-pink rounded-2xl p-8 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center group"
+            className="w-full card-gradient bg-gradient-primary rounded-2xl p-5 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center"
           >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Camera className="w-16 h-16 mb-4 group-hover:scale-110 transition-transform" />
-            </motion.div>
-            <h3 className="text-2xl font-bold mb-2">Scan Photo</h3>
-            <p className="text-sm text-white/90 text-center">
-              Capture study material with your camera
+            <Camera className="w-10 h-10 mb-2" />
+            <h3 className="text-base font-bold mb-0.5">Scan Photo</h3>
+            <p className="text-[11px] text-white/80 text-center">
+              Capture with camera
             </p>
           </motion.button>
           <input
@@ -114,20 +109,15 @@ export default function CreateFlashCardsPage() {
         {/* Upload Photo */}
         <motion.div variants={itemVariants}>
           <motion.button
-            whileHover={{ scale: 1.05, y: -10 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => photoInputRef.current?.click()}
-            className="w-full card-gradient bg-gradient-teal-cyan rounded-2xl p-8 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center group"
+            className="w-full card-gradient bg-gradient-teal-cyan rounded-2xl p-5 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center"
           >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
-            >
-              <Upload className="w-16 h-16 mb-4 group-hover:scale-110 transition-transform" />
-            </motion.div>
-            <h3 className="text-2xl font-bold mb-2">Upload Photo</h3>
-            <p className="text-sm text-white/90 text-center">
-              Choose an image from your device
+            <Upload className="w-10 h-10 mb-2" />
+            <h3 className="text-base font-bold mb-0.5">Upload Photo</h3>
+            <p className="text-[11px] text-white/80 text-center">
+              Choose from device
             </p>
           </motion.button>
           <input
@@ -142,20 +132,15 @@ export default function CreateFlashCardsPage() {
         {/* Upload PDF */}
         <motion.div variants={itemVariants}>
           <motion.button
-            whileHover={{ scale: 1.05, y: -10 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => pdfInputRef.current?.click()}
-            className="w-full card-gradient bg-gradient-teal-cyan rounded-2xl p-8 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center group"
+            className="w-full card-gradient bg-gradient-violet rounded-2xl p-5 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center"
           >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.4 }}
-            >
-              <FileText className="w-16 h-16 mb-4 group-hover:scale-110 transition-transform" />
-            </motion.div>
-            <h3 className="text-2xl font-bold mb-2">Upload PDF</h3>
-            <p className="text-sm text-white/90 text-center">
-              Upload textbooks or documents
+            <FileText className="w-10 h-10 mb-2" />
+            <h3 className="text-base font-bold mb-0.5">Upload PDF</h3>
+            <p className="text-[11px] text-white/80 text-center">
+              Textbooks & docs
             </p>
           </motion.button>
           <input
@@ -170,20 +155,15 @@ export default function CreateFlashCardsPage() {
         {/* Manual Entry */}
         <motion.div variants={itemVariants}>
           <motion.button
-            whileHover={{ scale: 1.05, y: -10 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => navigate('/flashcards/manual')}
-            className="w-full card-gradient bg-gradient-orange-amber rounded-2xl p-8 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center group"
+            className="w-full card-gradient bg-gradient-orange-amber rounded-2xl p-5 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center"
           >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-            >
-              <PenLine className="w-16 h-16 mb-4 group-hover:scale-110 transition-transform" />
-            </motion.div>
-            <h3 className="text-2xl font-bold mb-2">Manual Entry</h3>
-            <p className="text-sm text-white/90 text-center">
-              Create cards by typing terms and definitions
+            <PenLine className="w-10 h-10 mb-2" />
+            <h3 className="text-base font-bold mb-0.5">Manual Entry</h3>
+            <p className="text-[11px] text-white/80 text-center">
+              Type your own cards
             </p>
           </motion.button>
         </motion.div>
@@ -191,41 +171,29 @@ export default function CreateFlashCardsPage() {
 
       {/* Info Section */}
       <motion.div
-        className="card p-8 bg-gradient-to-br from-purple-50 to-pink-50"
+        className="card p-6 bg-gradient-to-br from-sky-50 to-cyan-50"
         variants={itemVariants}
       >
-        <h3 className="text-xl font-bold mb-4 text-gray-900">
+        <h3 className="text-lg font-bold mb-3 text-gray-900">
           How it works
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="space-y-4">
           {[
-            {
-              step: '1',
-              title: 'Create or Upload',
-              description: 'Choose your content source: upload files or type manually',
-            },
-            {
-              step: '2',
-              title: 'Configure',
-              description: 'Name your deck and set the number of cards',
-            },
-            {
-              step: '3',
-              title: 'Study',
-              description: 'Learn with interactive flash cards and track progress',
-            },
+            { step: '1', title: 'Create or Upload', description: 'Choose your content source' },
+            { step: '2', title: 'Configure', description: 'Name your deck and set card count' },
+            { step: '3', title: 'Study', description: 'Learn with interactive flash cards' },
           ].map((item) => (
-            <div key={item.step} className="flex gap-4">
+            <div key={item.step} className="flex gap-3">
               <div className="flex-shrink-0">
-                <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-gradient-purple-pink text-white font-bold">
+                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-primary text-white font-bold text-sm">
                   {item.step}
                 </div>
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 mb-1">
+                <h4 className="font-semibold text-gray-900 text-sm mb-0.5">
                   {item.title}
                 </h4>
-                <p className="text-sm text-gray-600">{item.description}</p>
+                <p className="text-xs text-gray-600">{item.description}</p>
               </div>
             </div>
           ))}

@@ -42,7 +42,7 @@ export default function TestResultsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" color="purple" />
+        <LoadingSpinner size="lg" color="sky" />
       </div>
     )
   }
@@ -149,7 +149,7 @@ export default function TestResultsPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="text-2xl font-bold text-purple-600 mt-4"
+          className="text-2xl font-bold text-sky-600 mt-4"
         >
           {result.test_name}
         </motion.h2>
@@ -189,7 +189,7 @@ export default function TestResultsPage() {
           variants={itemVariants}
         >
           <div className="text-sm text-gray-600 mb-2">Final Score</div>
-          <div className="text-4xl font-bold text-purple-600">
+          <div className="text-4xl font-bold text-sky-600">
             {result.percentage}%
           </div>
         </motion.div>
@@ -294,7 +294,7 @@ export default function TestResultsPage() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/tests')}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-purple-600 text-purple-600 font-semibold hover:bg-purple-50 transition-colors"
+          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-sky-500 text-sky-600 font-semibold hover:bg-sky-50 transition-colors"
         >
           <RotateCcw className="w-5 h-5" />
           Retake Test
@@ -304,7 +304,7 @@ export default function TestResultsPage() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/create-test')}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-purple-pink text-white font-semibold hover:shadow-lg transition-all"
+          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
         >
           <Plus className="w-5 h-5" />
           New Test

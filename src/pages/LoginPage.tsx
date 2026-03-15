@@ -51,10 +51,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 flex items-center justify-center p-4">
       {/* Background Decorations */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -z-10 animate-pulse" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-pink-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -z-10 animate-pulse" />
+      <div className="absolute top-0 left-0 w-96 h-96 bg-sky-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -z-10 animate-pulse" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -z-10 animate-pulse" />
 
       <motion.div
         className="w-full max-w-md"
@@ -68,7 +68,7 @@ export default function LoginPage() {
           variants={itemVariants}
         >
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-purple-pink flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-lg">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
           </div>
@@ -87,7 +87,7 @@ export default function LoginPage() {
               onClick={() => setMode('signin')}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
                 mode === 'signin'
-                  ? 'bg-white shadow-sm text-purple-600'
+                  ? 'bg-white shadow-sm text-sky-600'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -97,7 +97,7 @@ export default function LoginPage() {
               onClick={() => setMode('signup')}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
                 mode === 'signup'
-                  ? 'bg-white shadow-sm text-purple-600'
+                  ? 'bg-white shadow-sm text-sky-600'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -193,7 +193,7 @@ export default function LoginPage() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={isLoading}
-              className="w-full mt-6 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-purple-pink hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-6 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <span className="inline-flex items-center gap-2">

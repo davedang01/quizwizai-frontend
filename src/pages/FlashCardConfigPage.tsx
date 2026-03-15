@@ -143,9 +143,9 @@ export default function FlashCardConfigPage() {
     >
       {/* Header */}
       <motion.div className="mb-8" variants={itemVariants}>
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-full mb-4">
-          <Zap className="w-4 h-4 text-purple-600" />
-          <span className="text-sm font-semibold text-purple-600">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-sky-100 rounded-full mb-4">
+          <Zap className="w-4 h-4 text-sky-600" />
+          <span className="text-sm font-semibold text-sky-600">
             Configure Flash Cards
           </span>
         </div>
@@ -156,8 +156,8 @@ export default function FlashCardConfigPage() {
       <motion.div className="card p-6" variants={itemVariants}>
         <h3 className="text-lg font-semibold mb-4">Uploaded File</h3>
         <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-          <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-            <Upload className="w-6 h-6 text-purple-600" />
+          <div className="w-12 h-12 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0">
+            <Upload className="w-6 h-6 text-sky-600" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-gray-900 truncate">
@@ -182,7 +182,7 @@ export default function FlashCardConfigPage() {
             whileTap={{ scale: 0.98 }}
             onClick={handleAnalyze}
             disabled={isAnalyzing}
-            className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-gradient-purple-pink hover:shadow-lg transition-all disabled:opacity-50"
+            className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all disabled:opacity-50"
           >
             {isAnalyzing ? (
               <span className="inline-flex items-center gap-2">
@@ -217,7 +217,7 @@ export default function FlashCardConfigPage() {
                   {analysis.topics.map((topic) => (
                     <span
                       key={topic}
-                      className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-medium"
+                      className="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-sm font-medium"
                     >
                       {topic}
                     </span>
@@ -299,7 +299,7 @@ export default function FlashCardConfigPage() {
               whileTap={{ scale: 0.98 }}
               onClick={handleGenerateFlashCards}
               disabled={isGenerating || !deckName}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-purple-pink hover:shadow-lg transition-all disabled:opacity-50"
+              className="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-gradient-primary hover:shadow-lg transition-all disabled:opacity-50"
             >
               {isGenerating ? (
                 <span className="inline-flex items-center justify-center gap-2">

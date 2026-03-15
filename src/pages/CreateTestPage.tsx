@@ -17,7 +17,6 @@ export default function CreateTestPage() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Store file in session storage temporarily
     const reader = new FileReader()
     reader.onload = (e) => {
       const fileData = {
@@ -60,48 +59,47 @@ export default function CreateTestPage() {
 
   return (
     <motion.div
-      className="space-y-8"
+      className="space-y-6"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       {/* Header */}
-      <motion.div className="mb-8" variants={itemVariants}>
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-full mb-4">
-          <Zap className="w-4 h-4 text-purple-600" />
-          <span className="text-sm font-semibold text-purple-600">
+      <motion.div className="mb-6" variants={itemVariants}>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-sky-100 rounded-full mb-3">
+          <Zap className="w-3.5 h-3.5 text-sky-600" />
+          <span className="text-xs font-semibold text-sky-600">
             AI-Powered Tests
           </span>
         </div>
-        <h1 className="text-4xl font-bold mb-2">Create Test</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold mb-1">Create Test</h1>
+        <p className="text-gray-600 text-sm">
           Upload your study material and let AI generate personalized tests
         </p>
       </motion.div>
 
       {/* Action Cards */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        className="space-y-4"
         variants={containerVariants}
       >
         {/* Scan Photo */}
         <motion.div variants={itemVariants}>
           <motion.button
-            whileHover={{ scale: 1.05, y: -10 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => cameraInputRef.current?.click()}
-            className="w-full card-gradient bg-gradient-purple-pink rounded-2xl p-8 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center group"
+            className="w-full card-gradient bg-gradient-primary rounded-2xl p-6 text-white hover:shadow-xl transition-all flex items-center gap-4"
           >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Camera className="w-16 h-16 mb-4 group-hover:scale-110 transition-transform" />
-            </motion.div>
-            <h3 className="text-2xl font-bold mb-2">Scan Photo</h3>
-            <p className="text-sm text-white/90 text-center">
-              Use your camera to capture study material instantly
-            </p>
+            <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <Camera className="w-7 h-7" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-lg font-bold mb-0.5">Scan Photo</h3>
+              <p className="text-sm text-white/80">
+                Use your camera to capture study material
+              </p>
+            </div>
           </motion.button>
           <input
             ref={cameraInputRef}
@@ -116,21 +114,20 @@ export default function CreateTestPage() {
         {/* Upload Photo */}
         <motion.div variants={itemVariants}>
           <motion.button
-            whileHover={{ scale: 1.05, y: -10 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => photoInputRef.current?.click()}
-            className="w-full card-gradient bg-gradient-teal-cyan rounded-2xl p-8 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center group"
+            className="w-full card-gradient bg-gradient-teal-cyan rounded-2xl p-6 text-white hover:shadow-xl transition-all flex items-center gap-4"
           >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
-            >
-              <Upload className="w-16 h-16 mb-4 group-hover:scale-110 transition-transform" />
-            </motion.div>
-            <h3 className="text-2xl font-bold mb-2">Upload Photo</h3>
-            <p className="text-sm text-white/90 text-center">
-              Choose an image from your device
-            </p>
+            <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <Upload className="w-7 h-7" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-lg font-bold mb-0.5">Upload Photo</h3>
+              <p className="text-sm text-white/80">
+                Choose an image from your device
+              </p>
+            </div>
           </motion.button>
           <input
             ref={photoInputRef}
@@ -144,21 +141,20 @@ export default function CreateTestPage() {
         {/* Upload PDF */}
         <motion.div variants={itemVariants}>
           <motion.button
-            whileHover={{ scale: 1.05, y: -10 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => pdfInputRef.current?.click()}
-            className="w-full card-gradient bg-gradient-teal-cyan rounded-2xl p-8 text-white hover:shadow-xl transition-all h-full flex flex-col items-center justify-center group"
+            className="w-full card-gradient bg-gradient-violet rounded-2xl p-6 text-white hover:shadow-xl transition-all flex items-center gap-4"
           >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.4 }}
-            >
-              <FileText className="w-16 h-16 mb-4 group-hover:scale-110 transition-transform" />
-            </motion.div>
-            <h3 className="text-2xl font-bold mb-2">Upload PDF</h3>
-            <p className="text-sm text-white/90 text-center">
-              Upload textbooks or documents
-            </p>
+            <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-7 h-7" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-lg font-bold mb-0.5">Upload PDF</h3>
+              <p className="text-sm text-white/80">
+                Upload textbooks or documents
+              </p>
+            </div>
           </motion.button>
           <input
             ref={pdfInputRef}
@@ -172,41 +168,29 @@ export default function CreateTestPage() {
 
       {/* Info Section */}
       <motion.div
-        className="card p-8 bg-gradient-to-br from-blue-50 to-purple-50"
+        className="card p-6 bg-gradient-to-br from-sky-50 to-cyan-50"
         variants={itemVariants}
       >
-        <h3 className="text-xl font-bold mb-4 text-gray-900">
+        <h3 className="text-lg font-bold mb-3 text-gray-900">
           How it works
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="space-y-4">
           {[
-            {
-              step: '1',
-              title: 'Upload',
-              description: 'Scan or upload your study material',
-            },
-            {
-              step: '2',
-              title: 'Configure',
-              description: 'Customize difficulty and question types',
-            },
-            {
-              step: '3',
-              title: 'Study',
-              description: 'Take personalized tests and track progress',
-            },
+            { step: '1', title: 'Upload', description: 'Scan or upload your study material' },
+            { step: '2', title: 'Configure', description: 'Customize difficulty and question types' },
+            { step: '3', title: 'Study', description: 'Take personalized tests and track progress' },
           ].map((item) => (
-            <div key={item.step} className="flex gap-4">
+            <div key={item.step} className="flex gap-3">
               <div className="flex-shrink-0">
-                <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-gradient-purple-pink text-white font-bold">
+                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-primary text-white font-bold text-sm">
                   {item.step}
                 </div>
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 mb-1">
+                <h4 className="font-semibold text-gray-900 text-sm mb-0.5">
                   {item.title}
                 </h4>
-                <p className="text-sm text-gray-600">{item.description}</p>
+                <p className="text-xs text-gray-600">{item.description}</p>
               </div>
             </div>
           ))}

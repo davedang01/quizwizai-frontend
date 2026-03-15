@@ -25,25 +25,37 @@ body {
   min-height: 100vh;
 }
 
-/* Gradient Backgrounds */
-.bg-gradient-purple-pink {
-  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+/* ===== Sky Blue Theme Gradients ===== */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #0284C7 0%, #38BDF8 100%);
+}
+
+.bg-gradient-sky-indigo {
+  background: linear-gradient(135deg, #0EA5E9 0%, #6366F1 100%);
 }
 
 .bg-gradient-teal-cyan {
   background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
 }
 
-.bg-gradient-orange {
-  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+.bg-gradient-coral {
+  background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
 }
 
 .bg-gradient-orange-amber {
   background: linear-gradient(135deg, #f97316 0%, #f59e0b 100%);
 }
 
-.text-gradient-purple-pink {
-  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+.bg-gradient-emerald {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+}
+
+.bg-gradient-violet {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+}
+
+.text-gradient-primary {
+  background: linear-gradient(135deg, #0284C7 0%, #38BDF8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -56,7 +68,7 @@ body {
   background-clip: text;
 }
 
-/* Custom Animations */
+/* ===== Custom Animations ===== */
 @keyframes slideInUp {
   from {
     opacity: 0;
@@ -113,7 +125,7 @@ body {
   background-size: 1000px 100%;
 }
 
-/* Card Styling */
+/* ===== Card Styling ===== */
 .card {
   @apply rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow;
 }
@@ -122,7 +134,7 @@ body {
   @apply rounded-xl shadow-md hover:shadow-lg transition-shadow;
 }
 
-/* Button Styling */
+/* ===== Button Styling ===== */
 .btn-primary {
   @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200 hover:shadow-lg active:scale-95;
 }
@@ -135,18 +147,18 @@ body {
   @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100;
 }
 
-/* Input Styling */
+/* ===== Input Styling ===== */
 .input-primary {
-  @apply w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition-colors;
+  @apply w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-sky-500 focus:outline-none transition-colors;
 }
 
-/* Badge Styling */
+/* ===== Badge Styling ===== */
 .badge {
   @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium;
 }
 
-.badge-purple {
-  @apply bg-purple-100 text-purple-700;
+.badge-sky {
+  @apply bg-sky-100 text-sky-700;
 }
 
 .badge-pink {
@@ -161,26 +173,26 @@ body {
   @apply bg-orange-100 text-orange-700;
 }
 
-/* Scrollbar Styling */
+/* ===== Scrollbar Styling ===== */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-/* Utility Classes */
+/* ===== Utility Classes ===== */
 .truncate-lines-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -203,5 +215,10 @@ body {
 
 /* Focus visible */
 .focus-visible {
-  @apply outline-none ring-2 ring-purple-500 ring-offset-2;
+  @apply outline-none ring-2 ring-sky-500 ring-offset-2;
+}
+
+/* Bottom nav safe area */
+.pb-safe {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
 }
