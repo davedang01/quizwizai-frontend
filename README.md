@@ -1,0 +1,1 @@
+# QuizWiz AI Frontend
