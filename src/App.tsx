@@ -175,6 +175,17 @@ function App() {
       />
 
       <Route
+        path="/tutor"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <AiTutorPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/homework"
         element={
           <ProtectedRoute>

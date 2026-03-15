@@ -108,7 +108,7 @@ export default function DashboardPage() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/create-test')}
-          className="w-full card p-4 border-2 border-sky-200 text-sky-600 hover:bg-sky-50 transition-colors flex items-center gap-3"
+          className="w-full card-gradient bg-gradient-sky-indigo rounded-xl p-4 text-white hover:shadow-lg transition-shadow flex items-center gap-3"
         >
           <Plus className="w-6 h-6" />
           <span className="font-semibold">Create New Test</span>
