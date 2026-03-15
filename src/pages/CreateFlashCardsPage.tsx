@@ -23,58 +23,62 @@ export default function CreateFlashCardsPage() {
 
   const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
-    if (!files) return
+    if (!files || files.length === 0) return
 
     const allFiles = Array.from(files)
-    let loaded = 0
+    const results: FileData[] = []
 
     allFiles.forEach((file) => {
       const reader = new FileReader()
       reader.onload = (e) => {
-        loaded++
-        if (loaded === allFiles.length) {
-          const filesArray = allFiles.map((f) => ({
-            name: f.name,
-            type: f.type,
-            size: f.size,
-            data: e.target?.result || '',
-            uploadType: 'photo' as const,
-          }))
-          sessionStorage.setItem('uploadedFiles', JSON.stringify(filesArray))
+        results.push({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: e.target?.result || '',
+          uploadType: 'photo',
+        })
+
+        if (results.length === allFiles.length) {
+          sessionStorage.setItem('uploadedFiles', JSON.stringify(results))
           toast.success(`${allFiles.length} photo${allFiles.length > 1 ? 's' : ''} selected`)
           navigate('/flashcard-config')
         }
       }
       reader.readAsDataURL(file)
     })
+
+    event.target.value = ''
   }
 
   const handlePdfSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
-    if (!files) return
+    if (!files || files.length === 0) return
 
     const allFiles = Array.from(files)
-    let loaded = 0
+    const results: FileData[] = []
 
     allFiles.forEach((file) => {
       const reader = new FileReader()
       reader.onload = (e) => {
-        loaded++
-        if (loaded === allFiles.length) {
-          const filesArray = allFiles.map((f) => ({
-            name: f.name,
-            type: f.type,
-            size: f.size,
-            data: e.target?.result || '',
-            uploadType: 'pdf' as const,
-          }))
-          sessionStorage.setItem('uploadedFiles', JSON.stringify(filesArray))
+        results.push({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: e.target?.result || '',
+          uploadType: 'pdf',
+        })
+
+        if (results.length === allFiles.length) {
+          sessionStorage.setItem('uploadedFiles', JSON.stringify(results))
           toast.success(`${allFiles.length} PDF${allFiles.length > 1 ? 's' : ''} selected`)
           navigate('/flashcard-config')
         }
       }
       reader.readAsDataURL(file)
     })
+
+    event.target.value = ''
   }
 
   const handleCameraCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
