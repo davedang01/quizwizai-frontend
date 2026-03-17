@@ -1,16 +1,23 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Send, Clock, Plus, Bot } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Send, Clock, Plus, Bot, Camera, ImageIcon, Upload, Mic, MicOff, Volume2, FileText } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import api from '@/utils/api'
 import { ChatSession, ChatMessage } from '@/types'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import { formatMathContent } from '@/utils/formatMath'
+
+const GREETING_MESSAGE =
+  "Hi! I'm your AI Tutor. Ask me questions on your homework or any academic subject and I'll help teach concepts and provide answers. You can also upload a photo of a problem you're stuck on, or tap the mic to talk to me. I'm here to help, but not do your homework for you!"
 
 export default function AiTutorPage() {
   const navigate = useNavigate()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
 
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -19,6 +26,17 @@ export default function AiTutorPage() {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false)
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [pendingImage, setPendingImage] = useState<string | null>(null)
+  const [pendingImageName, setPendingImageName] = useState<string | null>(null)
+  const [showAttachMenu, setShowAttachMenu] = useState(false)
+
+  // Voice mode state
+  const [isVoiceMode, setIsVoiceMode] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [voiceTranscript, setVoiceTranscript] = useState('')
+  const recognitionRef = useRef<any>(null)
+  const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null)
 
   useEffect(() => {
     const initSession = async () => {
@@ -28,8 +46,7 @@ export default function AiTutorPage() {
         setMessages([
           {
             role: 'assistant',
-            content:
-              "Hey there! I'm your Quiz Wiz AI Tutor — think of me as your personal study buddy! I'm here to help you with any school subject, whether it's math, science, history, English, or anything else you're working on. What are you studying today?",
+            content: GREETING_MESSAGE,
             timestamp: new Date().toISOString(),
             has_attachment: false,
             attachment_type: null,
@@ -57,36 +74,219 @@ export default function AiTutorPage() {
     }
   }, [input])
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be under 10 MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = async () => {
+      let dataURL = reader.result as string
+      // Compress if needed
+      try {
+        const { compressImageDataURL } = await import('@/utils/compressImage')
+        dataURL = await compressImageDataURL(dataURL)
+      } catch { /* use original */ }
+      const base64 = dataURL.split(',')[1]
+      setPendingImage(base64)
+      setPendingImageName(file.name)
+      setShowAttachMenu(false)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const handlePdfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.type !== 'application/pdf') {
+      toast.error('Please select a PDF file')
+      return
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('PDF must be under 20 MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1]
+      setPendingImage(base64)
+      setPendingImageName(file.name)
+      setShowAttachMenu(false)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  // --- Voice Mode ---
+  const stopSpeaking = useCallback(() => {
+    synthRef.current?.cancel()
+    setIsSpeaking(false)
+  }, [])
+
+  const speakText = useCallback((text: string) => {
+    if (!synthRef.current) return
+    stopSpeaking()
+    // Clean markdown formatting for speech
+    const clean = text
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/```[\s\S]*?```/g, 'code block omitted')
+      .replace(/`(.*?)`/g, '$1')
+    const utterance = new SpeechSynthesisUtterance(clean)
+    utterance.rate = 0.95
+    utterance.pitch = 1.0
+    utterance.onend = () => {
+      setIsSpeaking(false)
+      // Auto-resume listening after response in voice mode
+      if (isVoiceMode) {
+        setTimeout(() => startListening(), 500)
+      }
+    }
+    utterance.onerror = () => setIsSpeaking(false)
+    setIsSpeaking(true)
+    synthRef.current.speak(utterance)
+  }, [stopSpeaking, isVoiceMode])
+
+  const startListening = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      toast.error('Voice input is not supported in this browser')
+      return
+    }
+    stopSpeaking()
+    const recognition = new SpeechRecognition()
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.lang = 'en-US'
+
+    let finalTranscript = ''
+    let silenceTimer: ReturnType<typeof setTimeout> | null = null
+
+    recognition.onresult = (event: any) => {
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript + ' '
+        } else {
+          interim += event.results[i][0].transcript
+        }
+      }
+      setVoiceTranscript(finalTranscript + interim)
+
+      // Reset silence timer on each result
+      if (silenceTimer) clearTimeout(silenceTimer)
+      silenceTimer = setTimeout(() => {
+        // 2 seconds of silence → auto-send
+        if (finalTranscript.trim()) {
+          recognition.stop()
+        }
+      }, 2000)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+      if (finalTranscript.trim()) {
+        setInput(finalTranscript.trim())
+        setVoiceTranscript('')
+        // Auto-send after voice input
+        setTimeout(() => {
+          const sendBtn = document.getElementById('tutor-send-btn')
+          sendBtn?.click()
+        }, 100)
+      }
+    }
+
+    recognition.onerror = (event: any) => {
+      if (event.error !== 'aborted') {
+        console.error('Speech recognition error:', event.error)
+        toast.error('Voice input error. Please try again.')
+      }
+      setIsListening(false)
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
+    setIsListening(true)
+    setVoiceTranscript('')
+  }, [stopSpeaking])
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop()
+    setIsListening(false)
+  }, [])
+
+  const toggleVoiceMode = () => {
+    if (isVoiceMode) {
+      // Turning off voice mode
+      stopListening()
+      stopSpeaking()
+      setIsVoiceMode(false)
+      setVoiceTranscript('')
+    } else {
+      // Turning on voice mode
+      setIsVoiceMode(true)
+      startListening()
+    }
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop()
+      synthRef.current?.cancel()
+    }
+  }, [])
+
   const handleSendMessage = async () => {
-    if (!input.trim() || !sessionId || isLoading) return
+    if ((!input.trim() && !pendingImage) || !sessionId || isLoading) return
 
     const userMessage = input.trim()
+    const imageToSend = pendingImage
     setInput('')
+    setPendingImage(null)
+    setPendingImageName(null)
 
     const newUserMessage: ChatMessage = {
       role: 'user',
-      content: userMessage,
+      content: userMessage || (imageToSend ? '📷 [Image uploaded]' : ''),
       timestamp: new Date().toISOString(),
-      has_attachment: false,
-      attachment_type: null,
+      has_attachment: !!imageToSend,
+      attachment_type: imageToSend ? 'image' : null,
     }
     setMessages((prev) => [...prev, newUserMessage])
 
     try {
       setIsLoading(true)
       const response = await api.post(`/homework/chat`, {
-        message: userMessage,
+        message: userMessage || 'Can you help me with this?',
         session_id: sessionId,
+        has_attachment: !!imageToSend,
+        attachment_type: imageToSend ? 'image' : null,
+        image_base64: imageToSend || undefined,
       })
 
+      const aiContent = response.data.response || 'I understand. How can I help you further?'
       const aiMessage: ChatMessage = {
         role: 'assistant',
-        content: response.data.response || 'I understand. How can I help you further?',
+        content: aiContent,
         timestamp: new Date().toISOString(),
         has_attachment: false,
         attachment_type: null,
       }
       setMessages((prev) => [...prev, aiMessage])
+
+      // In voice mode, read the response aloud
+      if (isVoiceMode) {
+        speakText(aiContent)
+      }
     } catch (error) {
       toast.error('Failed to send message')
     } finally {
@@ -119,8 +319,7 @@ export default function AiTutorPage() {
       setMessages([
         {
           role: 'assistant',
-          content:
-            "Hey! Ready for another study session? What subject can I help you with?",
+          content: GREETING_MESSAGE,
           timestamp: new Date().toISOString(),
           has_attachment: false,
           attachment_type: null,
@@ -225,7 +424,17 @@ export default function AiTutorPage() {
                   : 'bg-gray-100 text-gray-800 rounded-bl-md'
               }`}
             >
-              <p className="text-sm leading-relaxed">{msg.content}</p>
+              {msg.has_attachment && msg.attachment_type === 'image' && (
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 opacity-70" />
+                  <span className="text-xs opacity-70">Photo attached</span>
+                </div>
+              )}
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                {msg.role === 'assistant'
+                  ? formatMathContent(msg.content)
+                  : msg.content}
+              </p>
               <p
                 className={`text-[10px] mt-1 ${
                   msg.role === 'user' ? 'text-white/60' : 'text-gray-500'
@@ -272,33 +481,212 @@ export default function AiTutorPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-gray-200 px-4 py-3 bg-white">
-        <div className="flex gap-2">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSendMessage()
-              }
-            }}
-            placeholder="Ask me anything..."
-            className="flex-1 px-3.5 py-2.5 rounded-xl border border-gray-200 focus:border-sky-400 focus:outline-none resize-none overflow-hidden text-sm"
-            rows={1}
-          />
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={handleSendMessage}
-            disabled={!input.trim() || isLoading}
-            className="p-2.5 rounded-xl bg-sky-500 text-white hover:bg-sky-600 transition-colors disabled:opacity-40 flex-shrink-0"
+      {/* Voice Mode Overlay */}
+      <AnimatePresence>
+        {isVoiceMode && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="border-t border-sky-200 px-4 py-4 bg-gradient-to-b from-sky-50 to-white"
           >
-            <Send className="w-5 h-5" />
-          </motion.button>
+            <div className="flex flex-col items-center gap-3">
+              {/* Listening indicator */}
+              <div className="flex items-center gap-2">
+                {isListening ? (
+                  <>
+                    <motion.div
+                      className="w-3 h-3 rounded-full bg-red-500"
+                      animate={{ scale: [1, 1.3, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    />
+                    <span className="text-sm font-medium text-gray-700">Listening...</span>
+                  </>
+                ) : isSpeaking ? (
+                  <>
+                    <Volume2 className="w-4 h-4 text-sky-500" />
+                    <span className="text-sm font-medium text-sky-600">Speaking...</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-gray-500">Tap mic to speak</span>
+                )}
+              </div>
+
+              {/* Voice transcript preview */}
+              {voiceTranscript && (
+                <p className="text-sm text-gray-600 text-center max-w-xs italic">
+                  "{voiceTranscript}"
+                </p>
+              )}
+
+              {/* Controls */}
+              <div className="flex items-center gap-4">
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={isListening ? stopListening : startListening}
+                  disabled={isSpeaking || isLoading}
+                  className={`p-4 rounded-full transition-colors disabled:opacity-40 ${
+                    isListening
+                      ? 'bg-red-500 text-white shadow-lg shadow-red-200'
+                      : 'bg-sky-500 text-white shadow-lg shadow-sky-200'
+                  }`}
+                >
+                  {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                </motion.button>
+
+                {isSpeaking && (
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={stopSpeaking}
+                    className="p-3 rounded-full bg-gray-200 text-gray-600"
+                    title="Stop speaking"
+                  >
+                    <Volume2 className="w-5 h-5" />
+                  </motion.button>
+                )}
+              </div>
+
+              <button
+                onClick={toggleVoiceMode}
+                className="text-xs text-gray-500 hover:text-gray-700 underline"
+              >
+                Exit voice mode
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Input Area */}
+      {!isVoiceMode && (
+        <div className="border-t border-gray-200 px-4 py-3 bg-white">
+          {/* Pending attachment preview */}
+          {pendingImage && (
+            <div className="flex items-center gap-2 mb-2 px-2 py-1.5 bg-sky-50 rounded-lg border border-sky-200">
+              {pendingImageName?.endsWith('.pdf') ? (
+                <FileText className="w-4 h-4 text-sky-500 flex-shrink-0" />
+              ) : (
+                <ImageIcon className="w-4 h-4 text-sky-500 flex-shrink-0" />
+              )}
+              <span className="text-xs text-sky-700 truncate flex-1">
+                {pendingImageName || 'File attached'}
+              </span>
+              <button
+                onClick={() => { setPendingImage(null); setPendingImageName(null) }}
+                className="text-xs text-sky-500 hover:text-sky-700 font-medium"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          <div className="flex gap-2">
+            {/* Hidden file inputs */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handlePdfSelect}
+              className="hidden"
+            />
+
+            {/* Attach button with dropdown */}
+            <div className="relative">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowAttachMenu(!showAttachMenu)}
+                disabled={isLoading}
+                className="p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-40 flex-shrink-0"
+                title="Attach file"
+              >
+                <Upload className="w-5 h-5" />
+              </motion.button>
+
+              <AnimatePresence>
+                {showAttachMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute bottom-full left-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden min-w-[160px] z-20"
+                  >
+                    <button
+                      onClick={() => { cameraInputRef.current?.click() }}
+                      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Camera className="w-4 h-4 text-gray-500" />
+                      Take Photo
+                    </button>
+                    <button
+                      onClick={() => { fileInputRef.current?.click() }}
+                      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <ImageIcon className="w-4 h-4 text-gray-500" />
+                      Upload Image
+                    </button>
+                    <button
+                      onClick={() => { pdfInputRef.current?.click() }}
+                      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <FileText className="w-4 h-4 text-gray-500" />
+                      Upload PDF
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Voice mode button */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleVoiceMode}
+              disabled={isLoading}
+              className="p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-sky-50 hover:text-sky-500 transition-colors disabled:opacity-40 flex-shrink-0"
+              title="Voice mode"
+            >
+              <Mic className="w-5 h-5" />
+            </motion.button>
+
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSendMessage()
+                }
+              }}
+              placeholder="Ask me anything..."
+              className="flex-1 px-3.5 py-2.5 rounded-xl border border-gray-200 focus:border-sky-400 focus:outline-none resize-none overflow-hidden text-sm"
+              rows={1}
+            />
+            <motion.button
+              id="tutor-send-btn"
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSendMessage}
+              disabled={(!input.trim() && !pendingImage) || isLoading}
+              className="p-2.5 rounded-xl bg-sky-500 text-white hover:bg-sky-600 transition-colors disabled:opacity-40 flex-shrink-0"
+            >
+              <Send className="w-5 h-5" />
+            </motion.button>
+          </div>
         </div>
-      </div>
+      )}
     </motion.div>
   )
 }

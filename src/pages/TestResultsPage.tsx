@@ -11,20 +11,27 @@ import {
   Copy,
   ArrowRight,
   RefreshCw,
+  GraduationCap,
+  Loader2,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
-import { TestResult } from '@/types'
+import { TestResult, StudyGuide } from '@/types'
 import ScoreCircle from '@/components/common/ScoreCircle'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { toast } from 'sonner'
+import { formatMathContent } from '@/utils/formatMath'
 
 export default function TestResultsPage() {
   const { resultId } = useParams<{ resultId: string }>()
   const navigate = useNavigate()
   const [result, setResult] = useState<TestResult | null>(null)
+  const [scanId, setScanId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isResettingTest, setIsResettingTest] = useState(false)
+  const [isGeneratingGuide, setIsGeneratingGuide] = useState(false)
+  const [studyGuide, setStudyGuide] = useState<StudyGuide | null>(null)
+  const [showStudyGuide, setShowStudyGuide] = useState(false)
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -32,6 +39,15 @@ export default function TestResultsPage() {
       try {
         const response = await api.get(`/tests/results/${resultId}`)
         setResult(response.data)
+        // Fetch the test to get scan_id for "Create Another Version"
+        if (response.data.test_id) {
+          try {
+            const testResp = await api.get(`/tests/${response.data.test_id}`)
+            setScanId(testResp.data.scan_id || null)
+          } catch {
+            // Non-critical — Create Another Version will just go to fresh upload
+          }
+        }
       } catch (error) {
         toast.error('Failed to load test results')
         navigate('/tests')
@@ -272,9 +288,9 @@ export default function TestResultsPage() {
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-semibold text-gray-900 text-lg">
                     <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-600 font-bold mr-3">
-                      Q{result.wrong_answers.indexOf(wrong) + 1}
+                      Q{idx + 1}
                     </span>
-                    {wrong.question}
+                    {formatMathContent(wrong.question || '')}
                   </h3>
                 </div>
 
@@ -284,7 +300,7 @@ export default function TestResultsPage() {
                       Your answer:
                     </p>
                     <p className="text-sm text-red-600 font-semibold">
-                      {wrong.user_answer}
+                      {formatMathContent(wrong.user_answer || '')}
                     </p>
                   </div>
 
@@ -293,13 +309,133 @@ export default function TestResultsPage() {
                       Correct answer:
                     </p>
                     <p className="text-sm text-green-600 font-semibold">
-                      {wrong.correct_answer}
+                      {formatMathContent(wrong.correct_answer || '')}
                     </p>
                   </div>
                 </div>
               </motion.div>
             ))}
           </motion.div>
+        </motion.div>
+      )}
+
+      {/* Study Guide Section */}
+      {result.wrong_answers.length > 0 && (
+        <motion.div className="card p-8" variants={itemVariants}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <GraduationCap className="w-6 h-6 text-purple-500" />
+              Study Guide
+            </h2>
+            {!studyGuide && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={async () => {
+                  try {
+                    setIsGeneratingGuide(true)
+                    // Check if one already exists
+                    const existing = await api.get(`/study-guides/result/${resultId}`)
+                    if (existing.data.exists && existing.data.id) {
+                      const guideResp = await api.get(`/study-guides/${existing.data.id}`)
+                      setStudyGuide(guideResp.data)
+                      setShowStudyGuide(true)
+                    } else {
+                      const resp = await api.post('/study-guides/generate', { result_id: resultId })
+                      setStudyGuide(resp.data)
+                      setShowStudyGuide(true)
+                    }
+                  } catch (error) {
+                    toast.error('Failed to generate study guide')
+                  } finally {
+                    setIsGeneratingGuide(false)
+                  }
+                }}
+                disabled={isGeneratingGuide}
+                className="px-4 py-2 rounded-lg bg-purple-500 text-white font-semibold hover:bg-purple-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {isGeneratingGuide ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <BookOpen className="w-4 h-4" />
+                    Generate Study Guide
+                  </>
+                )}
+              </motion.button>
+            )}
+            {studyGuide && (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowStudyGuide(!showStudyGuide)}
+                className="text-sm text-purple-600 font-medium"
+              >
+                {showStudyGuide ? 'Hide' : 'Show'}
+              </motion.button>
+            )}
+          </div>
+
+          {!studyGuide && !isGeneratingGuide && (
+            <p className="text-gray-500 text-sm">
+              Get personalized explanations, tips, and practice questions for the ones you missed.
+            </p>
+          )}
+
+          {showStudyGuide && studyGuide && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="space-y-6 mt-4"
+            >
+              {studyGuide.guides.map((guide, gIdx) => (
+                <div key={gIdx} className="border rounded-xl overflow-hidden">
+                  {/* Question header */}
+                  <div className="bg-purple-50 px-5 py-3 border-b border-purple-100">
+                    <p className="font-semibold text-gray-900">
+                      {formatMathContent(guide.question || '')}
+                    </p>
+                    <div className="flex gap-4 mt-1 text-xs">
+                      <span className="text-red-500">Your answer: {formatMathContent(guide.user_answer || '')}</span>
+                      <span className="text-green-600">Correct: {formatMathContent(guide.correct_answer || '')}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-5 space-y-4">
+                    {/* Explanation */}
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h4 className="text-sm font-bold text-blue-700 mb-1">Explanation</h4>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {formatMathContent(guide.explanation || '')}
+                      </p>
+                    </div>
+
+                    {/* Tips */}
+                    {guide.tips && (
+                      <div className="bg-amber-50 rounded-lg p-4">
+                        <h4 className="text-sm font-bold text-amber-700 mb-1">Study Tips</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                          {formatMathContent(guide.tips)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Practice question */}
+                    {guide.practice_question && (
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <h4 className="text-sm font-bold text-green-700 mb-1">Practice Question</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                          {formatMathContent(guide.practice_question)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          )}
         </motion.div>
       )}
 
@@ -312,7 +448,7 @@ export default function TestResultsPage() {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/create-test')}
+          onClick={() => navigate(scanId ? `/test-config?scan_id=${scanId}` : '/create-test')}
           className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-gradient-coral text-white font-semibold hover:shadow-lg transition-all"
         >
           <Copy className="w-5 h-5" />

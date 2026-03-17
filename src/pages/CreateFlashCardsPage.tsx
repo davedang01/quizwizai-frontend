@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Camera, Upload, FileText, PenLine, Zap, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+import { useUploadStore } from '@/store/uploadStore'
 
 interface FileData {
   name: string
@@ -14,6 +15,7 @@ interface FileData {
 
 export default function CreateFlashCardsPage() {
   const navigate = useNavigate()
+  const setUploadFiles = useUploadStore((s) => s.setFiles)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
@@ -21,64 +23,73 @@ export default function CreateFlashCardsPage() {
   const [cameraCaptures, setCameraCaptures] = useState<FileData[]>([])
   const [showCameraPreview, setShowCameraPreview] = useState(false)
 
-  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (!files || files.length === 0) return
-
-    const allFiles = Array.from(files)
-    const results: FileData[] = []
-
-    allFiles.forEach((file) => {
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = (e) => {
-        results.push({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          data: e.target?.result || '',
-          uploadType: 'photo',
-        })
-
-        if (results.length === allFiles.length) {
-          sessionStorage.setItem('uploadedFiles', JSON.stringify(results))
-          toast.success(`${allFiles.length} photo${allFiles.length > 1 ? 's' : ''} selected`)
-          navigate('/flashcard-config')
-        }
-      }
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(new Error(`Failed to read ${file.name}`))
       reader.readAsDataURL(file)
     })
-
-    event.target.value = ''
   }
 
-  const handlePdfSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files || files.length === 0) return
 
-    const allFiles = Array.from(files)
-    const results: FileData[] = []
+    const fileList = Array.from(files)
+    const count = fileList.length
 
-    allFiles.forEach((file) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        results.push({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          data: e.target?.result || '',
-          uploadType: 'pdf',
+    try {
+      const results: FileData[] = await Promise.all(
+        fileList.map(async (file) => {
+          const data = await readFileAsDataURL(file)
+          return {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data,
+            uploadType: 'photo' as const,
+          }
         })
+      )
 
-        if (results.length === allFiles.length) {
-          sessionStorage.setItem('uploadedFiles', JSON.stringify(results))
-          toast.success(`${allFiles.length} PDF${allFiles.length > 1 ? 's' : ''} selected`)
-          navigate('/flashcard-config')
-        }
-      }
-      reader.readAsDataURL(file)
-    })
+      setUploadFiles(results)
+      toast.success(`${count} photo${count > 1 ? 's' : ''} selected`)
+      navigate('/flashcard-config')
+    } catch (err) {
+      console.error('Photo read error:', err)
+      toast.error('Failed to read selected photos. Please try again.')
+    }
+  }
 
-    event.target.value = ''
+  const handlePdfSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    const fileList = Array.from(files)
+    const count = fileList.length
+
+    try {
+      const results: FileData[] = await Promise.all(
+        fileList.map(async (file) => {
+          const data = await readFileAsDataURL(file)
+          return {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data,
+            uploadType: 'pdf' as const,
+          }
+        })
+      )
+
+      setUploadFiles(results)
+      toast.success(`${count} PDF${count > 1 ? 's' : ''} selected`)
+      navigate('/flashcard-config')
+    } catch (err) {
+      console.error('PDF read error:', err)
+      toast.error('Failed to read selected PDFs. Please try again.')
+    }
   }
 
   const handleCameraCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,7 +121,7 @@ export default function CreateFlashCardsPage() {
 
   const finalizeCameraCaptures = () => {
     if (cameraCaptures.length === 0) return
-    sessionStorage.setItem('uploadedFiles', JSON.stringify(cameraCaptures))
+    setUploadFiles(cameraCaptures)
     setCameraCaptures([])
     setShowCameraPreview(false)
     toast.success(`${cameraCaptures.length} photo${cameraCaptures.length > 1 ? 's' : ''} ready for analysis`)

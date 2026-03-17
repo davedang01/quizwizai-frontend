@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import api from '@/utils/api'
 import { StudyGuide } from '@/types'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import { formatMathContent } from '@/utils/formatMath'
 
 export default function StudyGuideDetailPage() {
   const { resultId } = useParams<{ resultId: string }>()
@@ -133,7 +134,7 @@ export default function StudyGuideDetailPage() {
                   Q{idx + 1}
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">
-                  {entry.question}
+                  {formatMathContent(entry.question || '')}
                 </h3>
               </div>
 
@@ -148,7 +149,7 @@ export default function StudyGuideDetailPage() {
                     </span>
                   </div>
                   <p className="text-sm text-red-600 font-semibold">
-                    {entry.user_answer}
+                    {formatMathContent(entry.user_answer || '')}
                   </p>
                 </div>
 
@@ -161,7 +162,7 @@ export default function StudyGuideDetailPage() {
                     </span>
                   </div>
                   <p className="text-sm text-green-600 font-semibold">
-                    {entry.correct_answer}
+                    {formatMathContent(entry.correct_answer || '')}
                   </p>
                 </div>
               </div>
@@ -179,8 +180,8 @@ export default function StudyGuideDetailPage() {
                     <h4 className="font-semibold text-gray-900">Explanation</h4>
                   </div>
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
-                    <p className="text-gray-700 text-sm leading-relaxed">
-                      {entry.explanation}
+                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {formatMathContent(entry.explanation || '')}
                     </p>
                   </div>
                 </motion.div>
@@ -199,8 +200,8 @@ export default function StudyGuideDetailPage() {
                     <h4 className="font-semibold text-gray-900">Study Tips</h4>
                   </div>
                   <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
-                    <p className="text-gray-700 text-sm leading-relaxed">
-                      {entry.tips}
+                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {formatMathContent(entry.tips || '')}
                     </p>
                   </div>
                 </motion.div>
@@ -220,8 +221,8 @@ export default function StudyGuideDetailPage() {
                     </h4>
                   </div>
                   <div className="bg-sky-50 border-l-4 border-sky-400 p-4 rounded-lg">
-                    <p className="text-gray-700 text-sm leading-relaxed">
-                      {entry.practice_question}
+                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {formatMathContent(entry.practice_question || '')}
                     </p>
                   </div>
                 </motion.div>

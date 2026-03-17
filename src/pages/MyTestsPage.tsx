@@ -26,7 +26,17 @@ export default function MyTestsPage() {
     const fetchTests = async () => {
       try {
         const response = await api.get('/tests')
-        setTests(response.data.tests || [])
+        // Backend returns array directly, map to frontend Test type
+        const rawTests = Array.isArray(response.data)
+          ? response.data
+          : response.data.tests || []
+        const mapped: Test[] = rawTests.map((t: any) => ({
+          ...t,
+          id: t.id || t._id,
+          total_questions: t.total_questions ?? t.questions?.length ?? 0,
+          timestamp: t.timestamp || t.created_at,
+        }))
+        setTests(mapped)
       } catch (error) {
         toast.error('Failed to load tests')
       } finally {

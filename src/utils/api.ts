@@ -26,8 +26,9 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('session_token');
-      // Only redirect if not already on login page
-      if (window.location.pathname !== '/login') {
+      // Only redirect if not on a public page
+      const publicPaths = ['/login', '/reset-password'];
+      if (!publicPaths.includes(window.location.pathname)) {
         window.location.href = '/login';
       }
     }

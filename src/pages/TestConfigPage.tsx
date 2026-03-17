@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, CheckCircle, BookOpen, Calculator, PenLine, Shuffle, Brain, Zap, Printer, Mail, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/authStore'
+import { useUploadStore } from '@/store/uploadStore'
 
 interface FileData {
   name: string
@@ -101,12 +102,17 @@ function buildPrintableHTML(testName: string, questions: GeneratedQuestion[], di
 
 export default function TestConfigPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const scanId = searchParams.get('scan_id')
   const user = useAuthStore((s) => s.user)
+  const uploadedFiles = useUploadStore((s) => s.files)
+  const clearUploadFiles = useUploadStore((s) => s.clearFiles)
   const [fileData, setFileData] = useState<FileData | null>(null)
   const [allFiles, setAllFiles] = useState<FileData[]>([])
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [loadingScan, setLoadingScan] = useState(false)
 
   // Form state
   const [testName, setTestName] = useState('')
@@ -124,48 +130,59 @@ export default function TestConfigPage() {
     }
   }, [user])
 
+  // If scan_id is present, fetch the saved scan analysis from the backend
   useEffect(() => {
-    // Try multi-file first, fall back to single file for backward compat
-    let uploadedFileStr = sessionStorage.getItem('uploadedFiles')
-    let filesArrayToUse: FileData[] = []
-    let fileDataToUse: FileData | null = null
+    if (!scanId) return
 
-    if (uploadedFileStr) {
+    const fetchScan = async () => {
       try {
-        filesArrayToUse = JSON.parse(uploadedFileStr) as FileData[]
-        if (filesArrayToUse.length > 0) {
-          fileDataToUse = filesArrayToUse[0] // Use first file for analysis
-        }
+        setLoadingScan(true)
+        setIsAnalyzing(true)
+        const response = await api.get(`/scan/${scanId}`)
+        setAnalysis(response.data)
+        // Create a placeholder fileData so the page doesn't redirect
+        setFileData({
+          name: 'Previous scan',
+          type: 'image/jpeg',
+          size: 0,
+          data: '',
+          uploadType: 'photo',
+        })
+        toast.success('Previous scan loaded!')
       } catch (error) {
-        console.error('Failed to parse uploadedFiles:', error)
+        toast.error('Failed to load previous scan. Please upload again.')
+        navigate('/create-test')
+      } finally {
+        setIsAnalyzing(false)
+        setLoadingScan(false)
       }
     }
 
-    // Fall back to single file (backward compat)
-    if (!fileDataToUse) {
-      uploadedFileStr = sessionStorage.getItem('uploadedFile')
-      if (uploadedFileStr) {
-        try {
-          fileDataToUse = JSON.parse(uploadedFileStr) as FileData
-          filesArrayToUse = [fileDataToUse]
-        } catch (error) {
-          console.error('Failed to parse uploadedFile:', error)
-        }
-      }
-    }
+    fetchScan()
+  }, [scanId, navigate])
 
-    if (!fileDataToUse) {
-      navigate('/create-test')
+  useEffect(() => {
+    // If scan_id is handling the load, skip file-based logic
+    if (scanId) return
+
+    // If we already have fileData loaded (analysis in progress or done), don't redirect
+    // This prevents clearUploadFiles() from triggering a redirect after test generation
+    if (fileData) return
+
+    // Read files from in-memory store (no sessionStorage size limits)
+    if (uploadedFiles.length > 0) {
+      setFileData(uploadedFiles[0])
+      setAllFiles(uploadedFiles)
       return
     }
 
-    setFileData(fileDataToUse)
-    setAllFiles(filesArrayToUse)
-  }, [navigate])
+    // No files available and nothing loaded yet — redirect back
+    navigate('/create-test')
+  }, [navigate, uploadedFiles, scanId, fileData])
 
-  // Auto-analyze on file load
+  // Auto-analyze on file load (skip if loaded from scan_id)
   useEffect(() => {
-    if (fileData && !analysis && !isAnalyzing) {
+    if (fileData && !analysis && !isAnalyzing && !scanId && !loadingScan) {
       handleAnalyze()
     }
   }, [fileData])
@@ -211,8 +228,12 @@ export default function TestConfigPage() {
       setAnalysis(response.data)
       toast.success('Content analyzed successfully!')
     } catch (error: any) {
-      console.error('Analysis error:', error?.response?.data || error)
-      toast.error('Failed to analyze content. Please try again.')
+      const detail = error?.response?.data?.detail
+      if (detail) {
+        toast.error(detail, { duration: 6000 })
+      } else {
+        toast.error('Failed to analyze content. Please try again.')
+      }
     } finally {
       setIsAnalyzing(false)
     }
@@ -248,8 +269,7 @@ export default function TestConfigPage() {
       const testId = response.data.id || response.data.test_id
       const generatedName = testName || `${analysis.subject} Quiz`
 
-      sessionStorage.removeItem('uploadedFile')
-      sessionStorage.removeItem('uploadedFiles')
+      clearUploadFiles()
 
       if (outputType === 'in-app') {
         navigate(`/test/${testId}`)
@@ -293,14 +313,24 @@ export default function TestConfigPage() {
       }
     } catch (error: any) {
       const detail = error?.response?.data?.detail || 'Unknown error'
-      console.error('Generate test error:', error?.response?.data || error)
-      toast.error(`Failed to generate test: ${detail}`)
+      const status = error?.response?.status
+      // Handle math content validation gracefully
+      if (status === 400 && detail.toLowerCase().includes('math')) {
+        toast.error(detail, { duration: 5000 })
+        // Suggest switching to a different quiz type
+        setTestType('multiple-choice')
+      } else if (status === 422) {
+        // Content quality issue — analysis failed or content is garbage
+        toast.error(detail, { duration: 6000 })
+      } else {
+        toast.error(`Failed to generate test: ${detail}`)
+      }
     } finally {
       setIsGenerating(false)
     }
   }
 
-  if (!fileData) {
+  if (!fileData && !loadingScan) {
     return null
   }
 
@@ -332,7 +362,10 @@ export default function TestConfigPage() {
         <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Configure Your Test</h1>
         {analysis && (
           <p className="text-sm text-gray-500">
-            {allFiles.length} file{allFiles.length > 1 ? 's' : ''} • {analysis.num_pages || 1} page{(analysis.num_pages || 1) > 1 ? 's' : ''} ready • Customize your quiz settings
+            {scanId
+              ? `${analysis.subject} • ${analysis.num_pages || 1} page${(analysis.num_pages || 1) > 1 ? 's' : ''} • Creating another version`
+              : `${allFiles.length} file${allFiles.length > 1 ? 's' : ''} • ${analysis.num_pages || 1} page${(analysis.num_pages || 1) > 1 ? 's' : ''} ready • Customize your quiz settings`
+            }
           </p>
         )}
       </div>
@@ -401,16 +434,25 @@ export default function TestConfigPage() {
           <div className="grid grid-cols-2 gap-3">
             {quizTypes.map((qt) => {
               const Icon = qt.icon
+              const isMathRecommended = qt.value === 'math-problems' && analysis &&
+                /math|calcul|algebra|geometry|trigonometr|equation|fraction|decimal|arithmetic/i.test(
+                  (analysis.subject || '') + ' ' + (analysis.topics || []).join(' ')
+                )
               return (
                 <button
                   key={qt.value}
                   onClick={() => setTestType(qt.value)}
-                  className={`p-4 rounded-xl text-left transition-all ${
+                  className={`p-4 rounded-xl text-left transition-all relative ${
                     testType === qt.value
                       ? 'bg-sky-50 border-2 border-sky-500 shadow-sm'
                       : 'bg-gray-50 border-2 border-transparent hover:border-gray-200'
                   }`}
                 >
+                  {isMathRecommended && (
+                    <span className="absolute top-2 right-2 text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                      Recommended
+                    </span>
+                  )}
                   <Icon className={`w-6 h-6 mb-2 ${testType === qt.value ? 'text-sky-600' : 'text-gray-400'}`} />
                   <p className={`text-sm font-semibold ${testType === qt.value ? 'text-sky-700' : 'text-gray-700'}`}>
                     {qt.label}

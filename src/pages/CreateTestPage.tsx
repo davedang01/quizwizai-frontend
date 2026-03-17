@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Camera, Upload, FileText, Zap, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+import { useUploadStore } from '@/store/uploadStore'
 
 interface FileData {
   name: string
@@ -14,6 +15,7 @@ interface FileData {
 
 export default function CreateTestPage() {
   const navigate = useNavigate()
+  const setUploadFiles = useUploadStore((s) => s.setFiles)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
@@ -21,89 +23,116 @@ export default function CreateTestPage() {
   const [cameraCaptures, setCameraCaptures] = useState<FileData[]>([])
   const [showCameraPreview, setShowCameraPreview] = useState(false)
 
-  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(new Error(`Failed to read ${file.name}`))
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const compressIfNeeded = async (dataURL: string): Promise<string> => {
+    // Only compress images, not PDFs
+    if (!dataURL.startsWith('data:image')) return dataURL
+    const { compressImageDataURL } = await import('@/utils/compressImage')
+    return compressImageDataURL(dataURL)
+  }
+
+  const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    console.log('[CreateTest] handlePhotoSelect fired, files:', files?.length)
+    if (!files || files.length === 0) {
+      console.log('[CreateTest] No files selected, returning')
+      return
+    }
+
+    // Copy file references immediately before any async work
+    const fileList = Array.from(files)
+    const count = fileList.length
+
+    try {
+      const results: FileData[] = await Promise.all(
+        fileList.map(async (file) => {
+          console.log(`[CreateTest] Reading: ${file.name} (${file.size} bytes)`)
+          let data = await readFileAsDataURL(file)
+          data = await compressIfNeeded(data)
+          console.log(`[CreateTest] Read complete: ${file.name}`)
+          return {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data,
+            uploadType: 'photo' as const,
+          }
+        })
+      )
+
+      console.log(`[CreateTest] All ${results.length} files read, storing and navigating`)
+      setUploadFiles(results)
+      toast.success(`${count} photo${count > 1 ? 's' : ''} selected`)
+      navigate('/test-config')
+    } catch (err) {
+      console.error('[CreateTest] Photo read error:', err)
+      toast.error('Failed to read selected photos. Please try again.')
+    }
+  }
+
+  const handlePdfSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files || files.length === 0) return
 
-    const allFiles = Array.from(files)
-    const results: FileData[] = []
+    const fileList = Array.from(files)
+    const count = fileList.length
 
-    allFiles.forEach((file) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        results.push({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          data: e.target?.result || '',
-          uploadType: 'photo',
+    try {
+      const results: FileData[] = await Promise.all(
+        fileList.map(async (file) => {
+          const data = await readFileAsDataURL(file)
+          return {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data,
+            uploadType: 'pdf' as const,
+          }
         })
+      )
 
-        if (results.length === allFiles.length) {
-          sessionStorage.setItem('uploadedFiles', JSON.stringify(results))
-          toast.success(`${allFiles.length} photo${allFiles.length > 1 ? 's' : ''} selected`)
-          navigate('/test-config')
-        }
-      }
-      reader.readAsDataURL(file)
-    })
-
-    // Reset input so same file can be re-selected
-    event.target.value = ''
+      setUploadFiles(results)
+      toast.success(`${count} PDF${count > 1 ? 's' : ''} selected`)
+      navigate('/test-config')
+    } catch (err) {
+      console.error('PDF read error:', err)
+      toast.error('Failed to read selected PDFs. Please try again.')
+    }
   }
 
-  const handlePdfSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (!files || files.length === 0) return
-
-    const allFiles = Array.from(files)
-    const results: FileData[] = []
-
-    allFiles.forEach((file) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        results.push({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          data: e.target?.result || '',
-          uploadType: 'pdf',
-        })
-
-        if (results.length === allFiles.length) {
-          sessionStorage.setItem('uploadedFiles', JSON.stringify(results))
-          toast.success(`${allFiles.length} PDF${allFiles.length > 1 ? 's' : ''} selected`)
-          navigate('/test-config')
-        }
-      }
-      reader.readAsDataURL(file)
-    })
-
-    event.target.value = ''
-  }
-
-  const handleCameraCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
+    try {
+      let data = await readFileAsDataURL(file)
+      data = await compressIfNeeded(data)
+
       const fileData: FileData = {
         name: file.name,
         type: file.type,
         size: file.size,
-        data: e.target?.result || '',
+        data,
         uploadType: 'camera',
       }
 
       setCameraCaptures((prev) => [...prev, fileData])
       setShowCameraPreview(true)
-      // Reset input for next capture
-      if (cameraInputRef.current) {
-        cameraInputRef.current.value = ''
-      }
+    } catch (err) {
+      console.error('[CreateTest] Camera capture error:', err)
     }
-    reader.readAsDataURL(file)
+    // Reset input for next capture
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ''
+    }
   }
 
   const removeCameraCapture = (index: number) => {
@@ -112,7 +141,7 @@ export default function CreateTestPage() {
 
   const finalizeCameraCaptures = () => {
     if (cameraCaptures.length === 0) return
-    sessionStorage.setItem('uploadedFiles', JSON.stringify(cameraCaptures))
+    setUploadFiles(cameraCaptures)
     setCameraCaptures([])
     setShowCameraPreview(false)
     toast.success(`${cameraCaptures.length} photo${cameraCaptures.length > 1 ? 's' : ''} ready for analysis`)

@@ -4,6 +4,7 @@ import { Loader2, Layers } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
 import { toast } from 'sonner'
+import { useUploadStore } from '@/store/uploadStore'
 
 interface FileData {
   name: string
@@ -24,6 +25,8 @@ interface AnalysisResult {
 
 export default function FlashCardConfigPage() {
   const navigate = useNavigate()
+  const uploadedFiles = useUploadStore((s) => s.files)
+  const clearUploadFiles = useUploadStore((s) => s.clearFiles)
   const [fileData, setFileData] = useState<FileData | null>(null)
   const [allFiles, setAllFiles] = useState<FileData[]>([])
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
@@ -36,42 +39,13 @@ export default function FlashCardConfigPage() {
   const [additionalPrompts, setAdditionalPrompts] = useState('')
 
   useEffect(() => {
-    // Try multi-file first, fall back to single file for backward compat
-    let uploadedFileStr = sessionStorage.getItem('uploadedFiles')
-    let filesArrayToUse: FileData[] = []
-    let fileDataToUse: FileData | null = null
-
-    if (uploadedFileStr) {
-      try {
-        filesArrayToUse = JSON.parse(uploadedFileStr) as FileData[]
-        if (filesArrayToUse.length > 0) {
-          fileDataToUse = filesArrayToUse[0] // Use first file for analysis
-        }
-      } catch (error) {
-        console.error('Failed to parse uploadedFiles:', error)
-      }
-    }
-
-    // Fall back to single file (backward compat)
-    if (!fileDataToUse) {
-      uploadedFileStr = sessionStorage.getItem('uploadedFile')
-      if (uploadedFileStr) {
-        try {
-          fileDataToUse = JSON.parse(uploadedFileStr) as FileData
-          filesArrayToUse = [fileDataToUse]
-        } catch (error) {
-          console.error('Failed to parse uploadedFile:', error)
-        }
-      }
-    }
-
-    if (!fileDataToUse) {
-      navigate('/create-flashcards')
+    if (uploadedFiles.length > 0) {
+      setFileData(uploadedFiles[0])
+      setAllFiles(uploadedFiles)
       return
     }
 
-    setFileData(fileDataToUse)
-    setAllFiles(filesArrayToUse)
+    navigate('/create-flashcards')
   }, [navigate])
 
   // Auto-analyze on file load
@@ -146,8 +120,7 @@ export default function FlashCardConfigPage() {
       }
 
       const response = await api.post('/flashcards/generate', payload)
-      sessionStorage.removeItem('uploadedFile')
-      sessionStorage.removeItem('uploadedFiles')
+      clearUploadFiles()
       navigate(`/flashcards/${response.data.id || response.data.deck_id}`)
       toast.success('Flash cards generated successfully!')
     } catch (error: any) {

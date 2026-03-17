@@ -21,35 +21,51 @@ import StudyGuidesListPage from '@/pages/StudyGuidesListPage'
 import StudyGuideDetailPage from '@/pages/StudyGuideDetailPage'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import { Sparkles } from 'lucide-react'
 
 function App() {
   const { user, isLoading, checkAuth } = useAuthStore()
+  const [slowServer, setSlowServer] = useState(false)
 
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
 
-  const [showColdStartMsg, setShowColdStartMsg] = useState(false)
-
+  // If loading takes more than 3 seconds, show the "server is waking up" message
   useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => setShowColdStartMsg(true), 10000)
-      return () => clearTimeout(timer)
-    } else {
-      setShowColdStartMsg(false)
+    if (!isLoading) {
+      setSlowServer(false)
+      return
     }
+    const timer = setTimeout(() => setSlowServer(true), 3000)
+    return () => clearTimeout(timer)
   }, [isLoading])
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 gap-4">
-        <LoadingSpinner size="lg" color="sky" />
-        {showColdStartMsg && (
-          <div className="text-center px-6">
-            <p className="text-sm font-semibold text-gray-700">Server is waking up, please wait...</p>
-            <p className="text-xs text-gray-500 mt-1">This can take up to 60 seconds on the first visit</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 gap-6">
+        {/* QuizWiz AI Logo */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-[72px] h-[72px] rounded-2xl bg-gradient-primary flex items-center justify-center shadow-lg" style={{ boxShadow: '0 10px 25px -5px rgba(2,132,199,0.3)' }}>
+            <Sparkles className="w-9 h-9 text-white" />
           </div>
-        )}
+          <div className="text-center">
+            <h1 className="text-[28px] font-bold text-gray-900 mb-1">Quiz Wiz AI</h1>
+            <p className="text-sm text-gray-500">Smart Study Made Easy</p>
+          </div>
+        </div>
+        {/* Loading indicator */}
+        <div className="flex flex-col items-center gap-3">
+          <LoadingSpinner size="lg" color="sky" />
+          {slowServer ? (
+            <>
+              <p className="text-sm font-medium text-gray-700">Server is waking up...</p>
+              <p className="text-xs text-gray-400">(can take up to a minute on first visit)</p>
+            </>
+          ) : (
+            <p className="text-sm font-medium text-gray-500">Loading...</p>
+          )}
+        </div>
       </div>
     )
   }

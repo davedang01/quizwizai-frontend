@@ -6,6 +6,7 @@ import api from '@/utils/api'
 import { Test, Question } from '@/types'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { toast } from 'sonner'
+import { formatMathContent } from '@/utils/formatMath'
 
 interface UserAnswers {
   [questionId: string]: string
@@ -28,7 +29,7 @@ export default function TestPage() {
       try {
         const response = await api.get(`/tests/${testId}`)
         setTest(response.data)
-      } catch (error) {
+      } catch (error: any) {
         toast.error('Failed to load test')
         navigate('/tests')
       } finally {
@@ -49,6 +50,21 @@ export default function TestPage() {
 
   if (!test) {
     return null
+  }
+
+  if (!test.questions || test.questions.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-xl font-bold text-gray-900 mb-2">No questions generated</h2>
+        <p className="text-gray-600 mb-4">The AI was unable to generate questions. Please try again.</p>
+        <button
+          onClick={() => navigate('/create-test')}
+          className="px-6 py-3 bg-sky-500 text-white rounded-lg font-semibold"
+        >
+          Try Again
+        </button>
+      </div>
+    )
   }
 
   const handleRetakeTest = async () => {
@@ -95,7 +111,7 @@ export default function TestPage() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/create-test')}
+            onClick={() => navigate(test.scan_id ? `/test-config?scan_id=${test.scan_id}` : '/create-test')}
             className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-gradient-coral text-white font-semibold hover:shadow-lg transition-all"
           >
             <Copy className="w-5 h-5" />
@@ -164,12 +180,17 @@ export default function TestPage() {
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true)
+      // Convert { questionId: answer } dict to list format backend expects
+      const answersList = Object.entries(userAnswers).map(([question_id, answer]) => ({
+        question_id,
+        answer,
+      }))
       const payload = {
         test_id: testId,
-        answers: userAnswers,
+        answers: answersList,
       }
       const response = await api.post('/tests/submit', payload)
-      navigate(`/test-results/${response.data.result_id}`)
+      navigate(`/test-results/${response.data.id}`)
       toast.success('Test submitted successfully!')
     } catch (error) {
       toast.error('Failed to submit test')
@@ -205,12 +226,12 @@ export default function TestPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{test.test_name}</h1>
             <p className="text-gray-600 text-sm mt-1">
-              Question {currentQuestionIndex + 1} of {test.total_questions}
+              Question {currentQuestionIndex + 1} of {test.questions.length}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-600">
-              Answered: {answeredCount}/{test.total_questions}
+              Answered: {answeredCount}/{test.questions.length}
             </span>
           </div>
         </div>
@@ -220,7 +241,7 @@ export default function TestPage() {
           <motion.div
             className="h-full bg-gradient-primary"
             initial={{ width: 0 }}
-            animate={{ width: `${((currentQuestionIndex + 1) / test.total_questions) * 100}%` }}
+            animate={{ width: `${((currentQuestionIndex + 1) / test.questions.length) * 100}%` }}
             transition={{ duration: 0.3 }}
           />
         </motion.div>
@@ -264,11 +285,18 @@ export default function TestPage() {
             transition={{ delay: 0.1 }}
             className="mb-8"
           >
-            <div className="inline-block px-4 py-1 bg-sky-100 text-sky-700 rounded-full text-sm font-semibold mb-4">
-              Question {currentQuestionIndex + 1}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="inline-block px-4 py-1 bg-sky-100 text-sky-700 rounded-full text-sm font-semibold">
+                Question {currentQuestionIndex + 1}
+              </div>
+              {currentQuestion.type && (
+                <div className="inline-block px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium capitalize">
+                  {currentQuestion.type.replace(/_/g, ' ').replace(/-/g, ' ')}
+                </div>
+              )}
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              {currentQuestion.question}
+            <h2 className="text-2xl font-bold text-gray-900 whitespace-pre-wrap">
+              {formatMathContent((currentQuestion as any).text || currentQuestion.question || '')}
             </h2>
           </motion.div>
 
@@ -279,7 +307,7 @@ export default function TestPage() {
             transition={{ delay: 0.2 }}
             className="space-y-3 mb-8"
           >
-            {currentQuestion.type === 'multiple-choice' &&
+            {(currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'multiple_choice') &&
               currentQuestion.options ? (
               currentQuestion.options.map((option, idx) => (
                 <motion.label
@@ -306,10 +334,32 @@ export default function TestPage() {
                     className="w-5 h-5 cursor-pointer"
                   />
                   <span className="ml-4 text-lg text-gray-900 font-medium">
-                    {option}
+                    {formatMathContent(option)}
                   </span>
                 </motion.label>
               ))
+            ) : currentQuestion.type === 'word_problem' || currentQuestion.type === 'word-problem' ? (
+              <div>
+                <textarea
+                  value={userAnswers[currentQuestion.id] || ''}
+                  onChange={(e) => handleAnswerChange(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-lg focus:border-sky-400 focus:outline-none resize-none"
+                  placeholder="Show your work and write your answer here..."
+                  rows={4}
+                />
+                <p className="text-xs text-gray-400 mt-1">Tip: Show your reasoning for best results</p>
+              </div>
+            ) : currentQuestion.type === 'math' || currentQuestion.type === 'math-problem' ? (
+              <div>
+                <input
+                  type="text"
+                  value={userAnswers[currentQuestion.id] || ''}
+                  onChange={(e) => handleAnswerChange(e.target.value)}
+                  className="input-primary text-lg"
+                  placeholder="Enter your numerical answer (e.g. 42, 3/4, 2.5)"
+                />
+                <p className="text-xs text-gray-400 mt-1">Tip: Use fractions (1/2), decimals (0.5), or mixed numbers (2 3/4)</p>
+              </div>
             ) : (
               <input
                 type="text"
@@ -335,7 +385,7 @@ export default function TestPage() {
           whileTap={{ scale: 0.98 }}
           onClick={handlePrevious}
           disabled={currentQuestionIndex === 0}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           <ChevronLeft className="w-5 h-5" />
           Previous
@@ -388,7 +438,7 @@ export default function TestPage() {
               <div className="mb-6 p-4 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-2">Test Summary</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {answeredCount}/{test.total_questions} answered
+                  {answeredCount}/{test.questions.length} answered
                 </p>
               </div>
 
@@ -413,8 +463,8 @@ export default function TestPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-gray-600 text-sm mb-2">
-                      {q.question}
+                    <p className="text-gray-600 text-sm mb-2 whitespace-pre-wrap">
+                      {formatMathContent((q as any).text || q.question || '')}
                     </p>
                     {userAnswers[q.id] && (
                       <p className="text-sm">
