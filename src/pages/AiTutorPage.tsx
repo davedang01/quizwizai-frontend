@@ -333,12 +333,78 @@ export default function AiTutorPage() {
 
   return (
     <motion.div
-      className="flex flex-col h-[calc(100vh-8rem)] -mx-4 -mt-4"
+      className="flex h-[calc(100vh-8rem)] lg:h-[calc(100vh-5rem)] -mx-4 -mt-4 lg:-mx-8 lg:-mt-8"
       initial={false}
       animate={{ opacity: 1 }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
+      {/* ── DESKTOP LEFT SIDEBAR: Session History ─────────── */}
+      <aside className="hidden lg:flex flex-col w-72 border-r border-gray-200 bg-gray-50 flex-shrink-0">
+        {/* Sidebar Header */}
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-sky-500" />
+            <h2 className="font-bold text-gray-900">AI Tutor</h2>
+          </div>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={handleNewChat}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-semibold hover:bg-sky-600 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            New Chat
+          </motion.button>
+        </div>
+
+        {/* Session History */}
+        <div className="flex-1 overflow-y-auto p-3">
+          <button
+            onClick={() => { loadSessions(); setShowHistory(true) }}
+            className="w-full text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 pb-2 flex items-center gap-1 hover:text-sky-600"
+          >
+            <Clock className="w-3.5 h-3.5" />
+            Recent Chats
+          </button>
+          {isLoadingSessions ? (
+            <div className="flex justify-center py-4"><LoadingSpinner size="sm" color="sky" /></div>
+          ) : sessions.length > 0 ? (
+            <div className="space-y-1">
+              {sessions.map((session) => (
+                <button
+                  key={session.id}
+                  onClick={() => handleSelectSession(session)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-white transition-colors border ${
+                    sessionId === session.id ? 'bg-white border-sky-200 shadow-sm' : 'border-transparent'
+                  }`}
+                >
+                  <p className="text-sm font-medium text-gray-800 truncate">{session.title || 'Untitled Chat'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{new Date(session.created_at).toLocaleDateString()}</p>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-sm text-gray-400">No previous chats</p>
+              <p className="text-xs text-gray-400 mt-1">Start a new conversation!</p>
+            </div>
+          )}
+        </div>
+
+        {/* Tips panel at bottom */}
+        <div className="p-4 border-t border-gray-200">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tips</p>
+          <ul className="space-y-1.5 text-xs text-gray-500">
+            <li className="flex items-start gap-1.5"><span className="text-sky-400 font-bold mt-0.5">📷</span> Upload a photo of a problem</li>
+            <li className="flex items-start gap-1.5"><span className="text-sky-400 font-bold mt-0.5">🎤</span> Use voice mode to talk hands-free</li>
+            <li className="flex items-start gap-1.5"><span className="text-sky-400 font-bold mt-0.5">📄</span> Share a PDF for help</li>
+          </ul>
+        </div>
+      </aside>
+
+      {/* ── CHAT PANEL ───────────────────────────────────── */}
+      <div className="flex flex-col flex-1 min-w-0">
+
+      {/* Header (mobile only — desktop has sidebar) */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white lg:hidden">
         <div>
           <h1 className="text-lg font-bold text-gray-900">AI Tutor</h1>
           <p className="text-xs text-gray-500">Your study companion</p>
@@ -364,12 +430,12 @@ export default function AiTutorPage() {
         </div>
       </div>
 
-      {/* History Panel */}
+      {/* Mobile History Panel */}
       {showHistory && (
         <motion.div
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
-          className="bg-gray-50 border-b border-gray-200 max-h-48 overflow-y-auto"
+          className="bg-gray-50 border-b border-gray-200 max-h-48 overflow-y-auto lg:hidden"
         >
           {isLoadingSessions ? (
             <div className="flex justify-center py-4">
@@ -400,8 +466,24 @@ export default function AiTutorPage() {
         </motion.div>
       )}
 
+      {/* Desktop Chat Header */}
+      <div className="hidden lg:flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-white">
+        <div>
+          <h2 className="font-semibold text-gray-900">Current Session</h2>
+          <p className="text-xs text-gray-400">{messages.length - 1} message{messages.length !== 2 ? 's' : ''}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {isVoiceMode && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-sky-600 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200">
+              <Mic className="w-3 h-3" />
+              Voice Mode Active
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 space-y-3 bg-white">
         {messages.map((msg, idx) => (
           <motion.div
             key={idx}
@@ -559,7 +641,7 @@ export default function AiTutorPage() {
 
       {/* Input Area */}
       {!isVoiceMode && (
-        <div className="border-t border-gray-200 px-4 py-3 bg-white">
+        <div className="border-t border-gray-200 px-4 lg:px-6 py-3 bg-white">
           {/* Pending attachment preview */}
           {pendingImage && (
             <div className="flex items-center gap-2 mb-2 px-2 py-1.5 bg-sky-50 rounded-lg border border-sky-200">
@@ -687,6 +769,7 @@ export default function AiTutorPage() {
           </div>
         </div>
       )}
+      </div>{/* end chat panel */}
     </motion.div>
   )
 }

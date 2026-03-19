@@ -189,9 +189,12 @@ export default function CreateTestPage() {
         </p>
       </motion.div>
 
+      {/* Desktop two-column wrapper */}
+      <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+
       {/* Action Cards */}
       <motion.div
-        className="space-y-4"
+        className="space-y-4 lg:space-y-0 lg:col-span-2 lg:grid lg:grid-cols-1 lg:gap-4"
         variants={containerVariants}
       >
         {/* Scan Photo */}
@@ -338,7 +341,7 @@ export default function CreateTestPage() {
 
       {/* Info Section */}
       <motion.div
-        className="card p-6 bg-gradient-to-br from-sky-50 to-cyan-50"
+        className="card p-6 bg-gradient-to-br from-sky-50 to-cyan-50 lg:col-span-1 lg:self-start"
         variants={itemVariants}
       >
         <h3 className="text-lg font-bold mb-3 text-gray-900">
@@ -366,6 +369,8 @@ export default function CreateTestPage() {
           ))}
         </div>
       </motion.div>
+
+      </div>{/* end desktop grid */}
     </motion.div>
   )
 }

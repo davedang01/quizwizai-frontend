@@ -11,6 +11,8 @@ import {
   Award,
   ArrowRight,
   MessageCircle,
+  BookOpen,
+  BarChart2,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
@@ -35,28 +37,12 @@ export default function DashboardPage() {
         setIsLoading(false)
       }
     }
-
     fetchStats()
   }, [])
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  }
-
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 },
-    },
+    hidden: { opacity: 0, y: 16 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   }
 
   if (isLoading) {
@@ -70,168 +56,192 @@ export default function DashboardPage() {
   return (
     <motion.div
       className="space-y-6"
-      variants={containerVariants}
-      initial={false}
+      initial="hidden"
       animate="visible"
+      variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
     >
-      {/* Hero Section */}
+      {/* ── Hero ── */}
       <motion.div
-        className="card-gradient bg-gradient-primary rounded-2xl p-6 text-white overflow-hidden relative"
         variants={itemVariants}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500 via-sky-400 to-cyan-400 p-6 lg:p-8 text-white"
       >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full mb-3 w-fit">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="text-xs font-semibold">Your Learning Hub</span>
+        {/* decorative circles */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full" />
+        <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-white/10 rounded-full" />
+
+        <div className="relative z-10 lg:flex lg:items-center lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full mb-3 w-fit">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold">Your Learning Hub</span>
+            </div>
+            <h1 className="text-2xl lg:text-3xl font-bold mb-1">Welcome to Quiz Wiz AI!</h1>
+            <p className="text-sm text-white/90 lg:text-base">
+              Turn any study material into personalized quizzes and flash cards.
+            </p>
+            {stats && stats.streak_days > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full mt-3"
+              >
+                <Flame className="w-4 h-4 text-orange-300" />
+                <span className="text-sm font-semibold">{stats.streak_days} day streak!</span>
+              </motion.div>
+            )}
           </div>
-          <h1 className="text-3xl font-bold mb-1">Welcome to Quiz Wiz AI!</h1>
-          <p className="text-sm text-white/90 mb-4">
-            Turn any study material into personalized quizzes
-          </p>
-          {stats && stats.streak_days > 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full"
-            >
-              <Flame className="w-4 h-4 text-orange-300" />
-              <span className="text-sm font-semibold">{stats.streak_days} day streak!</span>
-            </motion.div>
+
+          {/* Desktop: stat summary inline with hero */}
+          {stats && (
+            <div className="hidden lg:grid grid-cols-3 gap-4 mt-0 ml-8">
+              {[
+                { label: 'Tests Done', value: stats.total_tests, icon: CheckCircle2 },
+                { label: 'Avg Score', value: `${Math.round(stats.avg_score)}%`, icon: TrendingUp },
+                { label: 'Scans', value: stats.total_scans, icon: FileText },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="bg-white/20 backdrop-blur rounded-xl p-4 text-center min-w-[90px]">
+                  <Icon className="w-5 h-5 mx-auto mb-1 text-white/80" />
+                  <p className="text-xl font-bold">{value}</p>
+                  <p className="text-xs text-white/80">{label}</p>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </motion.div>
 
-      {/* Quick Actions */}
-      <motion.div className="space-y-3" variants={itemVariants}>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/create-test')}
-          className="w-full card-gradient bg-gradient-sky-indigo rounded-xl p-4 text-white hover:shadow-lg transition-shadow flex items-center gap-3"
-        >
-          <Plus className="w-6 h-6" />
-          <span className="font-semibold">Create New Test</span>
-        </motion.button>
+      {/* ── Desktop two-column layout ── */}
+      <div className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
 
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/create-flashcards')}
-          className="w-full card-gradient bg-gradient-coral rounded-xl p-4 text-white hover:shadow-lg transition-shadow flex items-center gap-3"
-        >
-          <Zap className="w-6 h-6" />
-          <span className="font-semibold">Create Flash Cards</span>
-        </motion.button>
+        {/* Left column: Quick Actions */}
+        <div className="lg:col-span-1 space-y-3">
+          <h2 className="text-base font-semibold text-gray-700 hidden lg:block">Quick Actions</h2>
 
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/tutor')}
-          className="w-full card-gradient bg-gradient-teal-cyan rounded-xl p-4 text-white hover:shadow-lg transition-shadow flex items-center gap-3"
-        >
-          <MessageCircle className="w-6 h-6" />
-          <span className="font-semibold">My AI Tutor</span>
-        </motion.button>
-      </motion.div>
-
-      {/* Stats Grid */}
-      {stats && (
-        <>
-          <motion.div
-            className="grid grid-cols-1 gap-4"
+          <motion.button
             variants={itemVariants}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/create-test')}
+            className="w-full rounded-xl p-4 text-white hover:shadow-lg transition-shadow flex items-center gap-3 bg-gradient-to-r from-sky-500 to-indigo-500"
           >
-            {/* Tests Completed */}
-            <motion.div
-              whileHover={{ y: -3 }}
-              className="card p-5"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm mb-1">Tests Completed</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stats.total_tests}
-                  </p>
-                </div>
-                <div className="w-11 h-11 rounded-lg bg-sky-100 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-sky-600" />
-                </div>
-              </div>
-            </motion.div>
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+              <Plus className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-sm">Create New Test</p>
+              <p className="text-xs text-white/80">Upload material, generate quiz</p>
+            </div>
+            <ArrowRight className="w-4 h-4 ml-auto opacity-70" />
+          </motion.button>
 
-            {/* Average Score */}
-            <motion.div
-              whileHover={{ y: -3 }}
-              className="card p-5"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm mb-1">Average Score</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {Math.round(stats.avg_score)}%
-                  </p>
-                </div>
-                <div className="w-11 h-11 rounded-lg bg-emerald-100 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-emerald-600" />
-                </div>
-              </div>
-            </motion.div>
+          <motion.button
+            variants={itemVariants}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/create-flashcards')}
+            className="w-full rounded-xl p-4 text-white hover:shadow-lg transition-shadow flex items-center gap-3 bg-gradient-to-r from-orange-400 to-rose-400"
+          >
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-sm">Create Flash Cards</p>
+              <p className="text-xs text-white/80">Study with spaced repetition</p>
+            </div>
+            <ArrowRight className="w-4 h-4 ml-auto opacity-70" />
+          </motion.button>
 
-            {/* Photos Scanned */}
-            <motion.div
-              whileHover={{ y: -3 }}
-              className="card p-5"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm mb-1">Photos Scanned</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stats.total_scans}
-                  </p>
-                </div>
-                <div className="w-11 h-11 rounded-lg bg-teal-100 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-teal-600" />
-                </div>
+          <motion.button
+            variants={itemVariants}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/tutor')}
+            className="w-full rounded-xl p-4 text-white hover:shadow-lg transition-shadow flex items-center gap-3 bg-gradient-to-r from-teal-500 to-cyan-400"
+          >
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+              <MessageCircle className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-sm">My AI Tutor</p>
+              <p className="text-xs text-white/80">Ask questions, get explanations</p>
+            </div>
+            <ArrowRight className="w-4 h-4 ml-auto opacity-70" />
+          </motion.button>
+
+          <motion.button
+            variants={itemVariants}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/study-guide')}
+            className="w-full rounded-xl p-4 text-white hover:shadow-lg transition-shadow flex items-center gap-3 bg-gradient-to-r from-violet-500 to-purple-400"
+          >
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-sm">Study Guides</p>
+              <p className="text-xs text-white/80">AI-generated study notes</p>
+            </div>
+            <ArrowRight className="w-4 h-4 ml-auto opacity-70" />
+          </motion.button>
+        </div>
+
+        {/* Right column: Stats + Recent Results */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Mobile-only stat cards */}
+          {stats && (
+            <motion.div variants={itemVariants} className="grid grid-cols-3 gap-3 lg:hidden">
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
+                <CheckCircle2 className="w-5 h-5 text-sky-500 mx-auto mb-1" />
+                <p className="text-2xl font-bold text-gray-900">{stats.total_tests}</p>
+                <p className="text-xs text-gray-500">Tests Done</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
+                <TrendingUp className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
+                <p className="text-2xl font-bold text-gray-900">{Math.round(stats.avg_score)}%</p>
+                <p className="text-xs text-gray-500">Avg Score</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
+                <FileText className="w-5 h-5 text-teal-500 mx-auto mb-1" />
+                <p className="text-2xl font-bold text-gray-900">{stats.total_scans}</p>
+                <p className="text-xs text-gray-500">Scans</p>
               </div>
             </motion.div>
-          </motion.div>
+          )}
 
           {/* Achievements */}
-          {stats.badges && stats.badges.length > 0 && (
+          {stats?.badges && stats.badges.length > 0 && (
             <motion.div variants={itemVariants}>
-              <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
-                <Award className="w-5 h-5 text-yellow-500" />
-                Your Achievements
+              <h2 className="text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <Award className="w-4 h-4 text-yellow-500" />
+                Achievements
               </h2>
-              <motion.div
-                className="grid grid-cols-2 gap-3"
-                variants={containerVariants}
-              >
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {stats.badges.map((badge) => (
-                  <motion.div
+                  <div
                     key={badge.id}
-                    variants={itemVariants}
-                    className={`card p-3 text-center ${
-                      badge.earned
-                        ? 'bg-gradient-to-br from-yellow-50 to-orange-50'
-                        : 'opacity-50 grayscale'
+                    className={`bg-white rounded-xl p-3 text-center border border-gray-100 shadow-sm ${
+                      badge.earned ? 'bg-gradient-to-br from-yellow-50 to-orange-50' : 'opacity-50 grayscale'
                     }`}
                   >
-                    <div className="text-3xl mb-1">{badge.icon}</div>
-                    <p className="font-semibold text-xs mb-0.5">{badge.name}</p>
-                    <p className="text-[10px] text-gray-600">{badge.description}</p>
-                  </motion.div>
+                    <div className="text-2xl mb-1">{badge.icon}</div>
+                    <p className="font-semibold text-xs text-gray-800">{badge.name}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{badge.description}</p>
+                  </div>
                 ))}
-              </motion.div>
+              </div>
             </motion.div>
           )}
 
           {/* Recent Results */}
-          {stats.recent_results && stats.recent_results.length > 0 && (
+          {stats?.recent_results && stats.recent_results.length > 0 && (
             <motion.div variants={itemVariants}>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-bold">Recent Results</h2>
+                <h2 className="text-base font-semibold text-gray-700 flex items-center gap-2">
+                  <BarChart2 className="w-4 h-4 text-sky-500" />
+                  Recent Results
+                </h2>
                 <button
                   onClick={() => navigate('/tests')}
                   className="flex items-center gap-1 text-sky-600 hover:text-sky-700 font-semibold text-sm"
@@ -239,39 +249,56 @@ export default function DashboardPage() {
                   View All <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
-              <motion.div
-                className="space-y-2"
-                variants={containerVariants}
-              >
-                {stats.recent_results.slice(0, 5).map((result) => (
-                  <motion.div
+
+              {/* Desktop: table-style list */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                {stats.recent_results.slice(0, 6).map((result, idx) => (
+                  <div
                     key={result.id}
-                    variants={itemVariants}
                     onClick={() => navigate(`/test-results/${result.id}`)}
-                    className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    className={`flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-sky-50 transition-colors ${
+                      idx !== 0 ? 'border-t border-gray-100' : ''
+                    }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900 text-sm">
-                          {result.test_name}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          {result.correct_answers.length}/{result.total_questions} correct
-                        </p>
-                      </div>
-                      <ScoreCircle
-                        percentage={result.percentage}
-                        size="sm"
-                        showLabel={false}
-                      />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{result.test_name}</p>
+                      <p className="text-xs text-gray-500">{result.correct_answers.length}/{result.total_questions} correct</p>
                     </div>
-                  </motion.div>
+                    <ScoreCircle percentage={result.percentage} size="sm" showLabel={false} />
+                    <span
+                      className={`hidden lg:block text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        result.percentage >= 80
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : result.percentage >= 60
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {result.percentage >= 80 ? 'Great' : result.percentage >= 60 ? 'Good' : 'Review'}
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </div>
                 ))}
-              </motion.div>
+              </div>
             </motion.div>
           )}
-        </>
-      )}
+
+          {/* Empty state */}
+          {(!stats?.recent_results || stats.recent_results.length === 0) && (
+            <motion.div variants={itemVariants} className="bg-white rounded-xl border border-gray-100 shadow-sm p-10 text-center">
+              <Sparkles className="w-10 h-10 text-sky-300 mx-auto mb-3" />
+              <p className="font-semibold text-gray-700">No tests yet</p>
+              <p className="text-sm text-gray-500 mt-1">Create your first test to get started</p>
+              <button
+                onClick={() => navigate('/create-test')}
+                className="mt-4 px-5 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 transition-colors"
+              >
+                Create a Test
+              </button>
+            </motion.div>
+          )}
+        </div>
+      </div>
     </motion.div>
   )
 }
