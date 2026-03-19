@@ -13,6 +13,7 @@ import {
   MessageCircle,
   BookOpen,
   BarChart2,
+  ClipboardList,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
@@ -283,18 +284,36 @@ export default function DashboardPage() {
             </motion.div>
           )}
 
-          {/* Empty state */}
+          {/* Empty / pending state */}
           {(!stats?.recent_results || stats.recent_results.length === 0) && (
             <motion.div variants={itemVariants} className="bg-white rounded-xl border border-gray-100 shadow-sm p-10 text-center">
-              <Sparkles className="w-10 h-10 text-sky-300 mx-auto mb-3" />
-              <p className="font-semibold text-gray-700">No tests yet</p>
-              <p className="text-sm text-gray-500 mt-1">Create your first test to get started</p>
-              <button
-                onClick={() => navigate('/create-test')}
-                className="mt-4 px-5 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 transition-colors"
-              >
-                Create a Test
-              </button>
+              {(stats as any)?.tests_created > 0 ? (
+                <>
+                  <ClipboardList className="w-10 h-10 text-sky-400 mx-auto mb-3" />
+                  <p className="font-semibold text-gray-700">
+                    You have {(stats as any).tests_created} test{(stats as any).tests_created !== 1 ? 's' : ''} ready to take
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">Take a test to see your results here</p>
+                  <button
+                    onClick={() => navigate('/tests')}
+                    className="mt-4 px-5 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 transition-colors"
+                  >
+                    Go to My Tests
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-10 h-10 text-sky-300 mx-auto mb-3" />
+                  <p className="font-semibold text-gray-700">No tests yet</p>
+                  <p className="text-sm text-gray-500 mt-1">Create your first test to get started</p>
+                  <button
+                    onClick={() => navigate('/create-test')}
+                    className="mt-4 px-5 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 transition-colors"
+                  >
+                    Create a Test
+                  </button>
+                </>
+              )}
             </motion.div>
           )}
         </div>
