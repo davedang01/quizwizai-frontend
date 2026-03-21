@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 interface AuthStore {
   user: User | null;
   isLoading: boolean;
+  isSubmitting: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -15,19 +16,20 @@ interface AuthStore {
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   isLoading: true,
+  isSubmitting: false,
 
   login: async (email: string, password: string) => {
     try {
-      set({ isLoading: true });
+      set({ isSubmitting: true });
       const response = await api.post('/auth/login', { email, password });
       // Store token for cross-origin auth (production Netlify -> Render)
       if (response.data.token) {
         localStorage.setItem('session_token', response.data.token);
       }
-      set({ user: response.data.user || response.data, isLoading: false });
+      set({ user: response.data.user || response.data, isSubmitting: false });
       toast.success('Logged in successfully!');
     } catch (error: any) {
-      set({ isLoading: false });
+      set({ isSubmitting: false });
       const message = error.response?.data?.detail || 'Failed to login';
       toast.error(message);
       throw error;
@@ -36,15 +38,15 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   signup: async (name: string, email: string, password: string) => {
     try {
-      set({ isLoading: true });
+      set({ isSubmitting: true });
       const response = await api.post('/auth/signup', { name, email, password });
       if (response.data.token) {
         localStorage.setItem('session_token', response.data.token);
       }
-      set({ user: response.data.user || response.data, isLoading: false });
+      set({ user: response.data.user || response.data, isSubmitting: false });
       toast.success('Account created successfully!');
     } catch (error: any) {
-      set({ isLoading: false });
+      set({ isSubmitting: false });
       const message = error.response?.data?.detail || 'Failed to create account';
       toast.error(message);
       throw error;
