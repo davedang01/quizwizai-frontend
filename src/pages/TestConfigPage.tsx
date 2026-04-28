@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Loader2, CheckCircle, BookOpen, Calculator, PenLine, Shuffle, Brain, Zap, Printer, Mail, X } from 'lucide-react'
+import { Loader2, CheckCircle, BookOpen, Calculator, PenLine, Shuffle, Brain, Zap, Printer, Mail, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '@/utils/api'
 import { toast } from 'sonner'
@@ -123,6 +123,7 @@ export default function TestConfigPage() {
   const [outputType, setOutputType] = useState<OutputType>('in-app')
   const [emailAddress, setEmailAddress] = useState('')
   const [showEmailModal, setShowEmailModal] = useState(false)
+  const [showContentPreview, setShowContentPreview] = useState(false)
 
   useEffect(() => {
     if (user?.email) {
@@ -228,7 +229,21 @@ export default function TestConfigPage() {
       setAnalysis(response.data)
       toast.success('Content analyzed successfully!')
     } catch (error: any) {
+      const status = error?.response?.status
       const detail = error?.response?.data?.detail
+
+      if (status === 422) {
+        // Image was unreadable / metadata-hallucination detected.
+        // Clear upload state and bounce user back to the option page.
+        clearUploadFiles()
+        toast.error(
+          detail || 'There was a problem processing your image(s). Please try again.',
+          { duration: 6000 }
+        )
+        navigate('/create-test')
+        return
+      }
+
       if (detail) {
         toast.error(detail, { duration: 6000 })
       } else {
@@ -391,6 +406,45 @@ export default function TestConfigPage() {
           >
             Try again
           </button>
+        </div>
+      )}
+
+      {/* Content Preview — lets user verify the scan was read correctly */}
+      {analysis && analysis.content_text && (
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <button
+            onClick={() => setShowContentPreview((v) => !v)}
+            className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-bold text-gray-900">What we read from your scan</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Tap to verify the content looks correct before generating your test
+              </p>
+            </div>
+            {showContentPreview ? (
+              <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            )}
+          </button>
+
+          {showContentPreview && (
+            <div className="px-5 pb-5 border-t border-gray-100">
+              <div className="mt-3 bg-gray-50 rounded-xl p-4 max-h-48 overflow-y-auto">
+                <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed font-mono">
+                  {analysis.content_text}
+                </p>
+              </div>
+              <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800">
+                  <span className="font-semibold">Looks wrong?</span> Go back and re-scan with better lighting
+                  or a closer shot so the text is clearly visible.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
