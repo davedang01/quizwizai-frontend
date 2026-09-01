@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   created_at: string;
+  about_me?: string | null;
 }
 
 export interface ScanAnalysis {
@@ -33,6 +34,7 @@ export interface Test {
   total_questions: number;
   is_completed: boolean;
   score: number | null;
+  partial_answers?: Record<string, string>;
   timestamp: string;
 }
 

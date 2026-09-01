@@ -30,35 +30,48 @@ export default function AiTutorPage() {
   const [pendingImageName, setPendingImageName] = useState<string | null>(null)
   const [showAttachMenu, setShowAttachMenu] = useState(false)
 
-  // Voice mode state
-  const [isVoiceMode, setIsVoiceMode] = useState(false)
+  // Voice mode state — persisted across refreshes for the browser session
+  const [isVoiceMode, setIsVoiceMode] = useState(() =>
+    typeof window !== 'undefined' && sessionStorage.getItem('quizwiz-voice-mode') === 'true'
+  )
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
   const recognitionRef = useRef<any>(null)
   const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null)
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([])
 
   useEffect(() => {
-    const initSession = async () => {
+    const initView = async () => {
+      const greeting: ChatMessage = {
+        role: 'assistant',
+        content: GREETING_MESSAGE,
+        timestamp: new Date().toISOString(),
+        has_attachment: false,
+        attachment_type: null,
+      }
       try {
-        const response = await api.post('/homework/sessions/new')
-        setSessionId(response.data.id || response.data.session_id)
-        setMessages([
-          {
-            role: 'assistant',
-            content: GREETING_MESSAGE,
-            timestamp: new Date().toISOString(),
-            has_attachment: false,
-            attachment_type: null,
-          },
-        ])
-      } catch (error) {
-        toast.error('Failed to start chat session')
+        const res = await api.get('/homework/sessions')
+        const sessionList: ChatSession[] = res.data || []
+        setSessions(sessionList)
+
+        const latest = sessionList.find(s => (s.message_count ?? 0) > 0)
+        if (latest) {
+          const detail = await api.get(`/homework/sessions/${latest.id}`)
+          setSessionId(latest.id)
+          setMessages(detail.data.messages || [])
+        } else {
+          setSessionId(null)
+          setMessages([greeting])
+        }
+      } catch {
+        toast.error('Failed to load chat history')
+        setMessages([greeting])
       }
     }
 
-    initSession()
-  }, [])
+    initView()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -143,6 +156,15 @@ export default function AiTutorPage() {
     const utterance = new SpeechSynthesisUtterance(clean)
     utterance.rate = 0.95
     utterance.pitch = 1.0
+    // Prefer a female English voice: Samantha (macOS), Google US English (Chrome), or any female-named en voice
+    const voices = voicesRef.current
+    const femaleVoice =
+      voices.find(v => v.name === 'Samantha') ||
+      voices.find(v => /female/i.test(v.name) && v.lang.startsWith('en')) ||
+      voices.find(v => /\b(Karen|Ava|Victoria|Allison|Moira|Fiona|Susan)\b/i.test(v.name)) ||
+      voices.find(v => v.lang === 'en-US' && v.default) ||
+      null
+    if (femaleVoice) utterance.voice = femaleVoice
     utterance.onend = () => {
       setIsSpeaking(false)
       // Auto-resume listening after response in voice mode
@@ -155,11 +177,36 @@ export default function AiTutorPage() {
     synthRef.current.speak(utterance)
   }, [stopSpeaking, isVoiceMode])
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
       toast.error('Voice input is not supported in this browser')
       return
+    }
+
+    // Request mic permission explicitly — this shows the browser's native Allow/Block dialog.
+    // If already denied, we explain how to unblock it instead of showing a cryptic error.
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach(t => t.stop()) // release immediately; SpeechRecognition opens its own
+      } catch (err: any) {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          toast.error('Microphone blocked', {
+            description: 'Click the 🔒 icon in your browser\'s address bar → Site settings → Microphone → Allow, then try again.',
+            duration: 10000,
+          })
+        } else {
+          toast.error('Could not access microphone. Please connect one and try again.')
+        }
+        return
+      }
+    }
+
+    // Stop any existing recognition instance before creating a new one
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop() } catch (_) {}
+      recognitionRef.current = null
     }
     stopSpeaking()
     const recognition = new SpeechRecognition()
@@ -205,10 +252,23 @@ export default function AiTutorPage() {
     }
 
     recognition.onerror = (event: any) => {
-      if (event.error !== 'aborted') {
-        console.error('Speech recognition error:', event.error)
+      // 'aborted' and 'no-speech' are normal/benign — don't surface them as errors
+      if (event.error === 'aborted' || event.error === 'no-speech') {
+        setIsListening(false)
+        return
+      }
+      // 'not-allowed' can still fire if permissions change between getUserMedia and recognition.start()
+      if (event.error === 'not-allowed') {
+        toast.error('Microphone blocked', {
+          description: 'Click the 🔒 icon in your address bar → Site settings → Microphone → Allow, then try again.',
+          duration: 10000,
+        })
+      } else if (event.error === 'audio-capture') {
+        toast.error('No microphone found. Please connect one and try again.')
+      } else {
         toast.error('Voice input error. Please try again.')
       }
+      console.error('Speech recognition error:', event.error)
       setIsListening(false)
     }
 
@@ -225,14 +285,14 @@ export default function AiTutorPage() {
 
   const toggleVoiceMode = () => {
     if (isVoiceMode) {
-      // Turning off voice mode
       stopListening()
       stopSpeaking()
       setIsVoiceMode(false)
+      sessionStorage.removeItem('quizwiz-voice-mode')
       setVoiceTranscript('')
     } else {
-      // Turning on voice mode
       setIsVoiceMode(true)
+      sessionStorage.setItem('quizwiz-voice-mode', 'true')
       startListening()
     }
   }
@@ -245,8 +305,16 @@ export default function AiTutorPage() {
     }
   }, [])
 
+  // Load available TTS voices (Chrome fires voiceschanged async; Safari is sync)
+  useEffect(() => {
+    const load = () => { voicesRef.current = synthRef.current?.getVoices() || [] }
+    load()
+    synthRef.current?.addEventListener('voiceschanged', load)
+    return () => { synthRef.current?.removeEventListener('voiceschanged', load) }
+  }, [])
+
   const handleSendMessage = async () => {
-    if ((!input.trim() && !pendingImage) || !sessionId || isLoading) return
+    if ((!input.trim() && !pendingImage) || isLoading) return
 
     const userMessage = input.trim()
     const imageToSend = pendingImage
@@ -265,6 +333,16 @@ export default function AiTutorPage() {
 
     try {
       setIsLoading(true)
+      const wasNew = !sessionId
+      // Diagnostic: log what we're actually sending so we can correlate with backend logs
+      console.log('[AiTutor] sending', {
+        session_id: sessionId,
+        msg_len: userMessage.length,
+        has_attachment: !!imageToSend,
+        attachment_type: imageToSend ? 'image' : null,
+        image_b64_len: imageToSend ? imageToSend.length : 0,
+        attachment_name: pendingImageName,
+      })
       const response = await api.post(`/homework/chat`, {
         message: userMessage || 'Can you help me with this?',
         session_id: sessionId,
@@ -272,6 +350,13 @@ export default function AiTutorPage() {
         attachment_type: imageToSend ? 'image' : null,
         image_base64: imageToSend || undefined,
       })
+      console.log('[AiTutor] response ok', { response_len: (response.data.response || '').length })
+
+      // Capture session_id returned by backend (needed when session was just created)
+      if (wasNew) {
+        setSessionId(response.data.session_id)
+        loadSessions() // refresh sidebar to show new session + AI-generated title
+      }
 
       const aiContent = response.data.response || 'I understand. How can I help you further?'
       const aiMessage: ChatMessage = {
@@ -287,8 +372,12 @@ export default function AiTutorPage() {
       if (isVoiceMode) {
         speakText(aiContent)
       }
-    } catch (error) {
-      toast.error('Failed to send message')
+    } catch (error: any) {
+      // Surface enough detail to diagnose without poking at devtools
+      const status = error?.response?.status
+      const detail = error?.response?.data?.detail || error?.message || 'unknown error'
+      console.error('[AiTutor] chat failed', { status, detail, error })
+      toast.error(`Failed to send message${status ? ` (${status})` : ''}: ${detail}`)
     } finally {
       setIsLoading(false)
     }
@@ -307,33 +396,33 @@ export default function AiTutorPage() {
   }
 
   const handleSelectSession = async (session: ChatSession) => {
-    setSessionId(session.id)
-    setMessages(session.messages || [])
-    setShowHistory(false)
+    try {
+      const response = await api.get(`/homework/sessions/${session.id}`)
+      setSessionId(session.id)
+      setMessages(response.data.messages || [])
+      setShowHistory(false)
+    } catch {
+      toast.error('Failed to load chat session')
+    }
   }
 
-  const handleNewChat = async () => {
-    try {
-      const response = await api.post('/homework/sessions/new')
-      setSessionId(response.data.id || response.data.session_id)
-      setMessages([
-        {
-          role: 'assistant',
-          content: GREETING_MESSAGE,
-          timestamp: new Date().toISOString(),
-          has_attachment: false,
-          attachment_type: null,
-        },
-      ])
-      setShowHistory(false)
-    } catch (error) {
-      toast.error('Failed to create new chat session')
-    }
+  const handleNewChat = () => {
+    setSessionId(null)
+    setMessages([
+      {
+        role: 'assistant',
+        content: GREETING_MESSAGE,
+        timestamp: new Date().toISOString(),
+        has_attachment: false,
+        attachment_type: null,
+      },
+    ])
+    setShowHistory(false)
   }
 
   return (
     <motion.div
-      className="flex h-[calc(100vh-8rem)] lg:h-[calc(100vh-5rem)] -mx-4 -mt-4 lg:-mx-8 lg:-mt-8"
+      className="flex h-[calc(100vh-8rem)] lg:h-[calc(100vh-5rem)] -mx-4 -mt-4 lg:-mx-8 lg:-mt-8 overflow-x-hidden"
       initial={false}
       animate={{ opacity: 1 }}
     >
@@ -512,7 +601,7 @@ export default function AiTutorPage() {
                   <span className="text-xs opacity-70">Photo attached</span>
                 </div>
               )}
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                 {msg.role === 'assistant'
                   ? formatMathContent(msg.content)
                   : msg.content}

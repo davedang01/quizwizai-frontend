@@ -3,3 +3,6 @@ dist/
 .env
 *.timestamp*
 package-lock.json
+.claude/
+.git.corrupted-backup/
+.git.corrupted-original/

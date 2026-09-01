@@ -30,6 +30,7 @@ const navItems = [
   { path: '/tutor', icon: MessageCircle, label: 'AI Tutor' },
   { path: '/study-guide', icon: BookOpen, label: 'Study Guides' },
   { path: '/progress', icon: TrendingUp, label: 'Progress' },
+  { path: '/about-me', icon: User, label: 'About Me' },
 ]
 
 const bottomNavItems = [

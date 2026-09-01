@@ -17,6 +17,7 @@ import FlashCardConfigPage from '@/pages/FlashCardConfigPage'
 import ManualFlashCardsPage from '@/pages/ManualFlashCardsPage'
 import FlashCardViewerPage from '@/pages/FlashCardViewerPage'
 import AiTutorPage from '@/pages/AiTutorPage'
+import AboutMePage from '@/pages/AboutMePage'
 import StudyGuidesListPage from '@/pages/StudyGuidesListPage'
 import StudyGuideDetailPage from '@/pages/StudyGuideDetailPage'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
@@ -226,6 +227,17 @@ function App() {
           <ProtectedRoute>
             <MainLayout>
               <AiTutorPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/about-me"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <AboutMePage />
             </MainLayout>
           </ProtectedRoute>
         }

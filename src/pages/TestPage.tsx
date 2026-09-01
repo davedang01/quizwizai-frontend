@@ -29,6 +29,10 @@ export default function TestPage() {
       try {
         const response = await api.get(`/tests/${testId}`)
         setTest(response.data)
+        // Rehydrate previously saved in-progress answers so the user can resume
+        if (response.data?.partial_answers) {
+          setUserAnswers(response.data.partial_answers)
+        }
       } catch (error: any) {
         toast.error('Failed to load test')
         navigate('/tests')
@@ -165,16 +169,40 @@ export default function TestPage() {
     })
   }
 
+  // Persist the current question's answer so progress survives a reload/navigation.
+  // Fire-and-forget — UX shouldn't block on the network round trip.
+  const persistCurrentAnswer = () => {
+    const currentAnswer = userAnswers[currentQuestion.id]
+    if (testId && currentAnswer !== undefined && currentAnswer !== '') {
+      api
+        .post(`/tests/${testId}/save-progress`, {
+          question_id: currentQuestion.id,
+          answer: currentAnswer,
+        })
+        .catch(() => {
+          // Silent — don't interrupt flow if save fails. Submit will catch up.
+        })
+    }
+  }
+
   const handleNext = () => {
+    persistCurrentAnswer()
     if (currentQuestionIndex < test.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
     }
   }
 
   const handlePrevious = () => {
+    persistCurrentAnswer()
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1)
     }
+  }
+
+  const handleJumpToQuestion = (idx: number) => {
+    if (idx === currentQuestionIndex) return
+    persistCurrentAnswer()
+    setCurrentQuestionIndex(idx)
   }
 
   const handleSubmit = async () => {
@@ -254,7 +282,7 @@ export default function TestPage() {
             key={q.id}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setCurrentQuestionIndex(idx)}
+            onClick={() => handleJumpToQuestion(idx)}
             className={`px-3 py-2 rounded-lg font-medium transition-all ${
               idx === currentQuestionIndex
                 ? 'bg-gradient-primary text-white shadow-md'
@@ -406,7 +434,7 @@ export default function TestPage() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setShowReview(true)}
+            onClick={() => { persistCurrentAnswer(); setShowReview(true) }}
             className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-primary text-white font-semibold hover:shadow-lg transition-all"
           >
             <Eye className="w-5 h-5" />

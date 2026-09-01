@@ -20,17 +20,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor: handle 401 by clearing auth and redirecting to login
+// Response interceptor: on 401, clear the stored token so the auth store
+// sees no user and React Router redirects to /login — no hard reload needed.
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('session_token');
-      // Only redirect if not on a public page
-      const publicPaths = ['/login', '/reset-password'];
-      if (!publicPaths.includes(window.location.pathname)) {
-        window.location.href = '/login';
-      }
     }
     return Promise.reject(error);
   }

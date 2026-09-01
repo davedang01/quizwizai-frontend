@@ -253,33 +253,36 @@ export default function DashboardPage() {
 
               {/* Desktop: table-style list */}
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                {stats.recent_results.slice(0, 6).map((result, idx) => (
+                {stats.recent_results.slice(0, 6).map((result, idx) => {
+                  const pct = (result as any).percentage ?? (result as any).score ?? 0
+                  const resultId = (result as any).result_id ?? (result as any).id
+                  return (
                   <div
-                    key={result.id}
-                    onClick={() => navigate(`/test-results/${result.id}`)}
+                    key={resultId ?? idx}
+                    onClick={() => resultId ? navigate(`/test-results/${resultId}`) : navigate('/tests')}
                     className={`flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-sky-50 transition-colors ${
                       idx !== 0 ? 'border-t border-gray-100' : ''
                     }`}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 text-sm truncate">{result.test_name}</p>
-                      <p className="text-xs text-gray-500">{result.correct_answers.length}/{result.total_questions} correct</p>
+                      <p className="text-xs text-gray-500">{pct}% score</p>
                     </div>
-                    <ScoreCircle percentage={result.percentage} size="sm" showLabel={false} />
+                    <ScoreCircle percentage={pct} size="sm" showLabel={false} />
                     <span
                       className={`hidden lg:block text-xs font-semibold px-2.5 py-1 rounded-full ${
-                        result.percentage >= 80
+                        pct >= 80
                           ? 'bg-emerald-100 text-emerald-700'
-                          : result.percentage >= 60
+                          : pct >= 60
                           ? 'bg-yellow-100 text-yellow-700'
                           : 'bg-red-100 text-red-700'
                       }`}
                     >
-                      {result.percentage >= 80 ? 'Great' : result.percentage >= 60 ? 'Good' : 'Review'}
+                      {pct >= 80 ? 'Great' : pct >= 60 ? 'Good' : 'Review'}
                     </span>
                     <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   </div>
-                ))}
+                )})}
               </div>
             </motion.div>
           )}
